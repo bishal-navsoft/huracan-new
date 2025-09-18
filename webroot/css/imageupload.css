@@ -1,0 +1,84 @@
+.upload-here {
+    position: relative;
+}
+#BrowserHidden {
+    height: 31px;
+    opacity: 0;
+    position: relative;
+    text-align: right;
+    width: 357px;
+    z-index: 2;
+	cursor:pointer;
+	background:none;
+}
+#BrowserHidden {
+    height: 31px;
+    opacity: 0;
+    position: relative;
+    text-align: right;
+    width: 357px;
+    z-index: 2;
+	cursor:pointer;
+	background:none;
+}
+#BrowserVisible {
+    background: url("../img/browseimg.png") no-repeat scroll 100% 0 transparent;
+    height: 31px;
+    left: 192px;
+    padding-right: 92px;
+    position: absolute;
+    top: 0;
+    width: 194px;
+    z-index: 1;
+	cursor:pointer;
+}
+.contact-upload-here {
+   width: 370px;
+}
+#contactuploadBrowserVisible {
+    background: url("../img/browseimg.png") no-repeat scroll 100% 0 transparent;
+    cursor: pointer;
+    height: 31px;
+    left: 120px;
+    padding-right: 92px;
+    position: absolute;
+    top: 146px;
+    width: 257px;
+    z-index: 1;
+}
+#FileField {
+    border: 1px solid #CECECE;
+    float: right;  line-height: 28px;
+    height: 28px;
+    padding: 0 6px;
+    position: relative;
+    width: 252px;
+	cursor:pointer;
+}
+.broswerimg img{
+	float:left;
+
+}
+.broswerimg {
+	clear:both;
+	margin:5px 0 20px 159px;
+	 
+}
+
+.deleteimg {float:left; position:relative;}
+.deleteimg  a{	
+	display:block;
+	margin-left:10px;
+	position:absolute;
+	bottom:-54px;
+	left:-48px;
+}
+.broswerimg span{float:left;
+  text-align:left;
+}
+.upload-herechk {
+    left: -158px;
+    position: relative;
+    top: -1px;
+    width: 369px;
+}

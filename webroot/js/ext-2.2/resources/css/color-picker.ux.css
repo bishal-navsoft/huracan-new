@@ -1,0 +1,66 @@
+.x-cp-rgb-msk {
+	background-image: url(picker_mask.png);
+	background-color: #FF0000;
+	width: 182px;
+	height: 182px;
+	float: left;
+	/* for IE6 png transparency */
+	_background-image:none;
+	_filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='picker_mask.png',sizingMethod='scale');
+}
+.x-cp-rgb-picker {
+	width: 5px;
+	height: 5px;
+	background: url(picker.gif) transparent;
+	background-repeat: no-repeat;
+}
+.x-cp-hue-picker {
+	width: 5px;
+	height: 5px;
+	background: url(picker.gif) transparent;
+	background-repeat: no-repeat;
+}
+.x-cp-hue-msk {
+	margin: 0px 0px 0px 3px;
+	background-image: url(hue_bg.png);
+	background-color: #FF0000;
+	width: 14px;
+	height: 182px;
+	float: left;
+}
+.x-cp-control-container {
+	float: left;
+	margin: 0px 0px 0px 3px;
+	padding: 0px;
+}
+.x-cp-control-container label {
+	font-size: 9px;
+	margin: 0px;
+}
+.x-cp-color-container, .x-cp-wscolor-container {
+	width: 42px;
+	height: 16px;
+	border: 1px solid gray;
+	padding: 1px;
+	margin: 2px 0;
+	font-size: 9px;
+	text-align: center;
+	vertical-align: middle;
+}
+.x-cp-rgb-container {
+	font-size: 10px;
+}
+.x-cp-rgb-container .x-form-field, .x-cp-form div.x-form-element {
+	height: 12px;
+	line-height: 12px;
+	padding: 0;
+	width: 20px;
+}
+.x-cp-clear {
+	clear: both;
+}
+.x-cp-hexa-panel {
+	height: 30px;
+	float: none;
+}
+.x-cp-form {}

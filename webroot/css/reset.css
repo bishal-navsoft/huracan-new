@@ -1,0 +1,246 @@
+@charset "utf-8";
+/* CSS Document */
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, figcaption, figure, footer, header, hgroup, menu, nav, section, summary, time, mark, audio, video {
+	margin:0; padding:0; border:0; outline:0; font-size:100%; font:inherit; vertical-align:baseline; font-family: Tahoma, Geneva, sans-serif;}
+body{background: #fff;}
+*{margin: 0px; padding: 0px;}
+html, body{height: 100%; width: 100%; background:#ac8eca;}
+
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section, label, form {display:block;}
+
+h1, h2, h3, h4, h5, h6 { display:block; color:#7B07DE; }
+
+
+a {
+	color: #c45e00;
+	text-decoration: none;
+}
+a:hover {
+	color: #c45e00;
+	text-decoration: underline;
+}
+
+/*-------------------------------------------- COMMON FORMATTING */
+ul{ list-style:none;}
+img {
+	border:0;
+}
+sup {
+	position:relative;
+	bottom:0.3em;
+	vertical-align:baseline;
+}
+sub {
+	position:relative;
+	bottom:-0.2em;
+	vertical-align:baseline;
+}
+.fleft {
+	float:left;
+}
+.fright {
+	float:right;
+}
+.tcenter {
+	text-align:center;
+}
+.tright {
+	text-align:right;
+}
+.tleft {
+	text-align:left;
+}
+.posi_rel {
+	position:relative;
+}
+.valign {
+	vertical-align:middle;
+}
+
+blockquote, q {
+	quotes:none;
+}
+blockquote:before, blockquote:after, q:before, q:after {
+	content:'';
+	content:none;
+}
+/*remember to define visible focus styles!*/
+:focus {
+	outline:none;
+}
+/* remember to highlight inserts somehow! */
+ins {
+	margin: 0;
+	padding: 0 0 0.3em 0;
+}
+
+/* ----------------------------------------------------- BASE TYPOGRAPHY */
+
+p { margin:0; padding:0;}
+
+table {
+	border-collapse:collapse;
+	border-spacing:0;
+}
+/*------------------------------------------------------- FORMS */
+
+.clearfix:after {
+	content: ".";
+	display: block;
+	height: 0;
+	clear: both;
+	visibility: hidden;
+}
+.clearfix {
+	display: block;
+	zoom: 1;
+}
+
+/* Regular clearing, just in case! */
+.clear { clear: both; overflow:hidden; font-size:0; height:0;}
+
+/***********************grid css**********/
+.menuitems {
+           background-image:url(../img/gridimages/mainmenu.png) !important;
+        }
+				.up {
+            background-image:url(../img/gridimages/uparrow.png) !important;
+        }
+				.down {
+            background-image:url(../img/gridimages/downarrow.png) !important;
+        }
+
+   .unblock {
+            background-image:url(../img/gridimages/unblock.png) !important;
+        }
+        .unblock:hover {
+            background-image:url(../img/gridimages/unblock_hover.png) !important;
+        }
+
+        .block {
+            background-image:url(../img/gridimages/block.png) !important;
+        }
+        .block:hover {
+            background-image:url(../img/gridimages/block_hover.png) !important;
+        }
+
+	.change_password {
+            background-image:url(../img/gridimages/change_password.png) !important;
+        }
+	.change_password:hover {
+            background-image:url(../img/gridimages/change_password_hover.png) !important;
+        }
+
+	.view {
+            background-image:url(../img/gridimages/magnify.png) !important;
+        }
+	.surveyresult {
+            background-image:url(../img/gridimages/result.png) !important;
+        }
+
+	.edit {
+            background-image:url(../img/gridimages/edit.png) !important;
+        }
+	.dataentry {
+            background-image:url(../img/gridimages/data_entry.png) !important;
+        }
+	.rejection {
+            background-image:url(../img/gridimages/rejection.png) !important;
+        }
+	
+	
+		.edit:hover {
+            background-image:url(../img/gridimages/edit_hover.png) !important;
+        }
+
+		.commision {
+            background-image:url(../img/gridimages/commision.png) !important; 			
+        }
+		.commision:hover {
+            background-image:url(../img/gridimages/commision_hover.png) !important; 			
+        }
+
+				.share {
+            background-image:url(../img/gridimages/share.png) !important;
+        }
+		
+		.view {
+            background-image:url(../img/gridimages/view.png) !important;
+        }
+		.view:hover {
+            background-image:url(../img/gridimages/view_hover.png) !important;
+        }
+
+		.editsurvey {
+            background-image:url(../img/gridimages/page.png) !important;
+        }
+		.editsurvey:hover {
+            background-image:url(../img/gridimages/page_hover.png) !important;
+        }
+
+				.pageadd {
+            background-image:url(../img/gridimages/page_add.png) !important;
+        }
+				.next {
+            background-image:url(../img/gridimages/next.png) !important;
+        }
+
+		.login {
+            background-image:url(../img/gridimages/login.png) !important;
+        }
+		.login:hover {
+            background-image:url(../img/gridimages/login_hover.png) !important;
+        }
+
+				.restore{
+            background-image:url(../img/gridimages/restore.png) !important;
+        }
+
+		.go {
+            background-image:url(../img/gridimages/go.png) !important;
+        }
+		.go:hover {
+            background-image:url(../img/gridimages/go_hover.png) !important;
+        }
+
+				.copy {
+            background-image:url(../img/gridimages/icon_copy.gif) !important;
+        }
+				.copy_survey {
+            background-image:url(../img/gridimages/copy.jpg) !important;
+        }
+				.add {
+            background-image:url(../img/gridimages/add.png) !important;
+        }
+				.view_contacts {
+            background-image:url(../img/gridimages/view_contacts.gif) !important;
+        }
+        .save {
+            background-image:url(../img/gridimages/save.gif) !important;
+        }
+				.send_email {
+            background-image:url(../img/gridimages/send_email.png) !important;
+        }
+
+        .search {
+            background-image:url(../img/gridimages/go.png) !important;
+        }
+		.search:hover {
+            background-image:url(../img/gridimages/go_hover.png) !important;
+        }
+
+		.share {
+            background-image:url(../img/gridimages/share.png) !important;
+        }
+		.share:hover {
+            background-image:url(../img/gridimages/share_hover.png) !important;
+        }
+
+		.remove {
+            background-image:url(../img/gridimages/del.png) !important;
+        }
+		.remove:hover {
+            background-image:url(../img/gridimages/del_hover.png) !important;
+        }
+ 
