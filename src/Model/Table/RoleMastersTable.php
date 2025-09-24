@@ -29,4 +29,3 @@ class RoleMastersTable extends Table
         return $validator;
     }
 }
-

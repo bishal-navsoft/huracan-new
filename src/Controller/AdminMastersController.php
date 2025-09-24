@@ -52,15 +52,21 @@ class AdminMastersController extends AppController
         return $this->redirect($this->referer());
     }
 
+     public function test()
+    {
+        debug("dfghjkl");
+    }
     // Administrator index / login
     public function index()
     {
+        //debug("dfghjkl");
         // layout naming is application specific; in Cake 3/4 you can set layout with viewBuilder
         $this->viewBuilder()->setLayout('before_adminlogin_template');
         $this->set('login_error', '');
         $this->set('err', '');
 
         $session = $this->request->getSession();
+        // dd($session);
 
         // If already logged in (legacy _checkAdminLogin), you should replace with Authentication plugin check.
         if ($session->read('admin_id')) {
@@ -70,13 +76,18 @@ class AdminMastersController extends AppController
         if ($this->request->is('post')) {
             $data = $this->request->getData();
 
+            //debug($data);
+
             // Build conditions similar to original
             $conditions = [
                 'AdminMasters.isblocked' => 'N',
                 'AdminMasters.isdeleted' => 'N',
-                'AdminMasters.admin_user' => $data['AdminMaster']['admin_user'] ?? null,
+                // 'AdminMasters.admin_user' => $data['AdminMaster']['admin_user'] ?? null,
+                'AdminMasters.admin_user' => $data['admin_user'] ?? null,
                 'AdminMasters.admin_pass' => md5($data['AdminMaster']['admin_pass'] ?? ''),
             ];
+
+            //debug($conditions);
 
             $adminDataCount = $this->AdminMasters->find()
                 ->where($conditions)
@@ -84,6 +95,8 @@ class AdminMastersController extends AppController
                     return $q->where(['RoleMasters.isblocked' => 'N', 'RoleMasters.isdeleted' => 'N']);
                 }])
                 ->count();
+
+            //debug($adminDataCount);
 
             if ($adminDataCount > 0) {
                 $adminData = $this->AdminMasters->find()
