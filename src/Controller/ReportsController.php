@@ -3,6 +3,16 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
+use Cake\Core\Configure; 
+use Cake\Collection\Collection;
+use Cake\Event\EventInterface;
+use Cake\ORM\TableRegistry;
+use Cake\Mailer\Email;
+use Cake\Routing\Router;
+use Cake\Http\Response;
+use Cake\I18n\FrozenTime;
+use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Log\Log;
 
 class ReportsController extends AppController
 {
@@ -16,6 +26,17 @@ class ReportsController extends AppController
         $this->loadModel('Reports');
         $this->loadModel('AdminMasters');
         $this->loadModel('RoleMasters');
+		$this->loadModel('Incident');
+		$this->loadModel('BusinessType');
+		$this->loadModel('Fieldlocation');
+		$this->loadModel('Client');
+		$this->loadModel('IncidentSeverity');
+		$this->loadModel('Residual');
+		$this->loadModel('Potential');
+		$this->loadModel('Country');
+		$this->loadModel('HsseClient');
+
+		$this->viewBuilder()->setLayout('after_adminlogin_template');
     }
 
 	// public $name = 'Reports';
@@ -26,17 +47,11 @@ class ReportsController extends AppController
 	
 	/*public function reportHsseList(){
 		
-		dd("sdfgjkl");
-
-		debug('reportHsseList() called');
-   		die(); 
 		$this->_checkAdminSession();
-	        $this->_getRoleMenuPermission();
+	    $this->_getRoleMenuPermission();
 		$this->grid_access();
 		$this->report_hsse_link();
-		
 		$this->viewBuilder()->setLayout('after_adminlogin_template');
-	
 		$data = $this->request->getData();
 		if(!empty($data))
 		{
@@ -88,20 +103,26 @@ class ReportsController extends AppController
 	}*/
 	public function reportHsseList()
     {
-        $this->_checkAdminSession();      // assuming this exists in AppController
+        $this->_checkAdminSession();  // assuming this exists in AppController   
         $this->_getRoleMenuPermission();  // legacy helper method
         $this->grid_access();
         $this->report_hsse_link();
-
         $this->viewBuilder()->setLayout('after_adminlogin_template');
+		// debug($this->viewBuilder()->getTemplate());
 
+		// To print the layout being used:
+		// debug($this->viewBuilder()->getLayout());
         $data = $this->request->getData();
+		// dd("wertyuki");
+		// dd($this->_checkAdminSession()); 
+		// dd($data);
         $limit = $data['Report']['limit'] ?? 50;
         $action = $data['Report']['action'] ?? 'all';
 
         $this->set(compact('limit', 'action'));
 
         $session = $this->request->getSession();
+		// dd($session);
         $session->write('limit', $limit);
         $session->delete('filter');
         $session->delete('value');
@@ -113,208 +134,424 @@ class ReportsController extends AppController
             ->limit($limit)
             ->all()
             ->toArray();
+		// dd($reports);
 
         // handle session admin data (must be array-accessible)
         $adminData = $session->read('adminData');
+		// dd($adminData);
+		// debug( $session->read('adminData'),$session->read());
         $idBoolen = [];
 
         foreach ($reports as $report) {
-            if (
-                ($adminData['AdminMaster']['id'] ?? null) == $report['created_by']
-                || ($adminData['RoleMaster']['id'] ?? null) == 1
-            ) {
-                $idBoolen[] = 1;
-            } else {
-                $idBoolen[] = 0;
-            }
+
+			// dd("as");
+            // if (
+            //     ($adminData['AdminMaster']['id'] ?? null) == $report['created_by']
+            //     || ($adminData['RoleMaster']['id'] ?? null) == 1
+            // ) {
+            //     $idBoolen[] = 1;
+            // } else {
+            //     $idBoolen[] = 0;
+            // }
+
+			if (($adminData->id ?? null) == $report['created_by']   
+				|| ($adminData->role_master_id ?? null) == 1) {
+				$idBoolen[] = 1;
+			} else {
+				$idBoolen[] = 0;
+			}
+
+
+
         }
 
         $session->write('idBollen', $idBoolen);
 
         $this->set('reports', $reports);
     }
-	public function get_all_report($action ='all')
+	
+	/*public function getAllReport($action = 'all')
 	{
-		Configure::write('debug', '2');  
-		$this->layout = "ajax"; 
-		$this->_checkAdminSession();
-		$condition="";
-		$condition = "Report.isdeleted = 'N'";
-                if(isset($_REQUEST['filter'])){
-		switch($_REQUEST['filter']){
-			case'report_no':
-		$condition .= "AND ucase(Report.".$_REQUEST['filter'].") like '".$_REQUEST['value']."%'";	
-			break;
-		        case'client_name':
-			$clientCondition= " ucase(Client.name) like '".$_REQUEST['value']."%'";
-			$clientDetatail=$this->Client->find('all', array('conditions' =>$clientCondition));
-          		$condition .= "AND Report.Client =".$clientDetatail[0]['Client']['id'];	
-			break;
-		        case'creater_name':
-			$spliNAME=explode(" ",$_REQUEST['value']);
-			$spliLname=$spliNAME[count($spliNAME)-1];
-			$spliFname=$spliNAME[0];
-			$adminCondition="AdminMaster.first_name like '%".$spliFname."%' AND AdminMaster.last_name like '%".$spliLname."%'";
-			$userDetail = $this->AdminMaster->find('all',array('conditions'=>$adminCondition));
-			$addimid=$userDetail[0]['AdminMaster']['id'];
-			$condition .= "AND Report.created_by ='".$addimid."'";	
-			break;
-		        case'event_date_val':
-		        $explodemonth=explode('/',$_REQUEST['value']);
-			$day=$explodemonth[0];
-			$month=date('m', strtotime($explodemonth[1]));
-			$year="20$explodemonth[2]";
-			$createon=$year."-".$month."-".$day;
-			$condition .= "AND Report.event_date ='".$createon."'";	
-		        break;
-		}
-		}
-	 	$limit=null;
-		if($_REQUEST['limit'] == 'all'){
-					
-			//$condition .= " order by Category.id DESC";
-		}else{
-			$limit = $_REQUEST['start'].", ".$_REQUEST['limit'];			
-		}
-		$count = $this->Report->find('count' ,array('conditions' => $condition));
-		$adminArray = array();
-		
-      
-                $adminA = $this->Report->find('all' ,array('conditions' => $condition,'order' => 'Report.id DESC','limit'=>$limit));
-		
-		$idBoolen=array();
-		unset($_SESSION['idBollen']);
-		$i = 0;
-		foreach($adminA as $rec)
-		{
+		$this->request->allowMethod(['get', 'post']);
+		$this->viewBuilder()->setLayout('ajax');
 
-			
-			if(($_SESSION['adminData']['AdminMaster']['id']==$rec['Report']['created_by']) || ($_SESSION['adminData']['RoleMaster']['id']==1)){
-				array_push($idBoolen,1);
-				$adminA[$i]['Report']['edit_permit'] ="false";
-				$adminA[$i]['Report']['view_permit'] ="false";
-				$adminA[$i]['Report']['delete_permit'] ="false";
-				$adminA[$i]['Report']['block_permit'] ="false";
-				$adminA[$i]['Report']['unblock_permit'] ="false";
-				$adminA[$i]['Report']['checkbox_permit'] ="false";
-				
-				
-				if($rec['Report']['isblocked'] == 'N')
-			            {
-					$adminA[$i]['Report']['blockHideIndex'] = "true";
-					$adminA[$i]['Report']['unblockHideIndex'] = "false";
-				        
-			         }else{
-					$adminA[$i]['Report']['blockHideIndex'] = "false";
-					$adminA[$i]['Report']['unblockHideIndex'] = "true";
-					
-			        }
-				
-					
-			}else{
-				
-				array_push($idBoolen,0);
-				$adminA[$i]['Report']['edit_permit'] ="true";
-				$adminA[$i]['Report']['view_permit'] ="false";
-				$adminA[$i]['Report']['delete_permit'] ="true";
-				$adminA[$i]['Report']['block_permit'] ="true";
-				$adminA[$i]['Report']['unblock_permit'] ="true";
-			        $adminA[$i]['Report']['blockHideIndex'] = "true";
-				$adminA[$i]['Report']['unblockHideIndex'] = "true";
-				$adminA[$i]['Report']['checkbox_permit'] ="true";
-				
-				
-			}
-				
-			
-			   
-			$eventdate=explode("-",$rec['Report']['event_date']);
-			$evDT=date("d/M/y", mktime(0, 0, 0, $eventdate[1],$eventdate[2],$eventdate[0]));
-			$adminA[$i]['Report']['event_date_val']=$evDT;
-		        $adminA[$i]['Report']['incident_severity_name']='<font color='.$rec['IncidentSeverity']['color_code'].'>'.$rec['IncidentSeverity']['type'].'</font>';
-			$adminA[$i]['Report']['client_name']=$rec['Client']['name'];
-			$adminA[$i]['Report']['creater_name']=$rec['AdminMaster']['first_name']." ".$rec['AdminMaster']['last_name'];
-		    $i++;
+		// Get session safely
+		$adminData = $this->_checkAdminSession();
+		if (!$session->check('admin_id')) {
+			$this->set([
+				'admins'    => [],
+				'total'     => 0,
+				'status'    => 'error',
+				'message'   => 'Session expired',
+				'_serialize'=> ['admins', 'total', 'status', 'message']
+			]);
+			return;
 		}
-		
-	
-	        $remidial_close=array();
-		$remidial_open=array();
-		
-		for($i=0;$i<count($adminA);$i++){
-			
-	            
-			
-			if(count($adminA[$i]['HsseRemidial'])>0){
+		if ($adminData instanceof \Cake\Http\Response) {
+			return $adminData;
+		}
 
-			
+		$loggedInAdminId = $adminData['AdminMaster']['id'] ?? null;
+		$loggedInRoleId  = $adminData['RoleMaster']['id'] ?? null;
 
-				for($r=0;$r<count($adminA[$i]['HsseRemidial']);$r++){
-	
-					if(isset($adminA[$i]['HsseRemidial'][$r]['id'])){
-		
-				
+		// Base condition
+		$condition = ['Reports.isdeleted' => 'N'];
 
-					if($adminA[$i]['HsseRemidial'][$r]['remidial_closure_date']!='0000-00-00'){
-		
-					    $remidial_close[]=$adminA[$i]['HsseRemidial'][$r]['id'];
-					   
-					}elseif($adminA[$i]['HsseRemidial'][$r]['remidial_closure_date']=='0000-00-00'){
-					     $remidial_open[]=$adminA[$i]['HsseRemidial'][$r]['id'];
-					 
-			
+		// Filtering
+		$filter = $this->request->getQuery('filter');
+		$value  = $this->request->getQuery('value');
+
+		if ($filter && $value) {
+			switch ($filter) {
+				case 'report_no':
+					$condition['UPPER(Reports.report_no) LIKE'] = strtoupper($value) . '%';
+					break;
+
+				case 'client_name':
+					$client = $this->Reports->Clients->find()
+						->where(['UPPER(Clients.name) LIKE' => strtoupper($value) . '%'])
+						->first();
+					if ($client) {
+						$condition['Reports.client'] = $client->id;
 					}
-					
-				    }
-					
-				}
-			$adminA[$i]['Report']['remidial']=count($remidial_close).'/'.count($remidial_open);	
-			}else{
-			$adminA[$i]['Report']['remidial']='';	
+					break;
+
+				case 'creater_name':
+					$names = explode(' ', $value);
+					$firstName = $names[0];
+					$lastName  = end($names);
+					$admin = $this->Reports->AdminMasters->find()
+						->where([
+							'AdminMasters.first_name LIKE' => "%$firstName%",
+							'AdminMasters.last_name LIKE'  => "%$lastName%"
+						])
+						->first();
+					if ($admin) {
+						$condition['Reports.created_by'] = $admin->id;
+					}
+					break;
+
+				case 'event_date_val':
+					$parts = explode('/', $value); // d/m/y
+					if (count($parts) === 3) {
+						$day   = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+						$month = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+						$year  = "20" . $parts[2];
+						$condition['Reports.event_date'] = "$year-$month-$day";
+					}
+					break;
 			}
-			
-							
-
 		}
 
+		// Pagination
+		$start = (int)($this->request->getQuery('start') ?? 0);
+		$limit = $this->request->getQuery('limit');
+		//$limit = ($limit && $limit !== 'all') ? (int)$limit : null;
+		if ($limit === 'all' || $limit === null || $limit === '') {
+			$limit = 50; // Default limit
+		} else {
+			$limit = (int)$limit;
+		}
+
+		// Query for paginated results
+		$query = $this->Reports->find()
+			->contain(['Clients', 'AdminMasters', 'IncidentSeverities', 'HsseRemidials'])
+			->where($condition)
+			->order(['Reports.id' => 'DESC']);
+			->limit($limit)
+			->offset($start)
+			->all();
+
+		// Query for total count (without contain to avoid join issues)
+		$total = $this->Reports->find()
+			->where($condition)
+			->count();
+
+		// Apply limit and offset
+		if ($limit) {
+			$query = $query->limit($limit)->offset($start);
+		}
+
+		$reports = $query->all();
+
+		$adminArray = [];
+		$idBoolean  = [];
+
+		foreach ($reports as $rec) {
+			// Default permissions
+			$permissions = [
+				'edit_permit'     => false,
+				'view_permit'     => false,
+				'delete_permit'   => false,
+				'block_permit'    => false,
+				'unblock_permit'  => false,
+				'checkbox_permit' => false,
+				'blockHideIndex'  => true,
+				'unblockHideIndex'=> true,
+			];
+
+			if ($loggedInAdminId == $rec->created_by || $loggedInRoleId == 1) {
+				$permissions['blockHideIndex']   = $rec->isblocked === 'N';
+				$permissions['unblockHideIndex'] = $rec->isblocked !== 'N';
+			} else {
+				$permissions = array_map(fn($v) => true, $permissions);
+			}
+
+			// Event date
+			$eventDate = $rec->event_date ? FrozenTime::parse($rec->event_date)->format('d/M/y') : '';
+
+			// Incident severity
+			$incidentSeverity = '';
+			if (!empty($rec->incident_severity) && is_object($rec->incident_severity)) {
+				$incidentSeverity = '<font color="' . h($rec->incident_severity->color_code) . '">' .
+									h($rec->incident_severity->type) . '</font>';
+			}
+
+			// Client name
+			$clientName = '';
+			if (!empty($rec->client) && is_object($rec->client)) {
+				$clientName = h($rec->client->name);
+			} else {
+				$clientName = 'N/A';
+			}
+
+			// Remidials
+			$remidial_close = $remidial_open = [];
+			foreach ($rec->hsse_remidials as $r) {
+				if ($r->remidial_closure_date !== '0000-00-00') {
+					$remidial_close[] = $r->id;
+				} else {
+					$remidial_open[] = $r->id;
+				}
+			}
+			$remidial_summary = count($remidial_close) . '/' . count($remidial_open);
+
+			$adminArray[] = [
+				'id'                     => $rec->id,
+				'report_no'              => $rec->report_no,
+				'event_date'             => $rec->event_date,
+				'closure_date'           => $rec->closure_date,
+				'event_date_val'         => $eventDate,
+				'client'                 => $rec->client_id ?? null,
+				'client_name'            => $clientName,
+				'incident_severity_name' => $incidentSeverity,
+				'creater_name'           => $rec->admin_master
+					? $rec->admin_master->first_name . ' ' . $rec->admin_master->last_name
+					: '',
+				'remidial'               => $remidial_summary,
+				'summary'                => $rec->summary,
+				'isblocked'              => $rec->isblocked,
+				'edit_permit'            => $permissions['edit_permit'],
+				'view_permit'            => $permissions['view_permit'],
+				'delete_permit'          => $permissions['delete_permit'],
+				'block_permit'           => $permissions['block_permit'],
+				'unblock_permit'         => $permissions['unblock_permit'],
+				'checkbox_permit'        => $permissions['checkbox_permit'],
+				'blockHideIndex'         => $permissions['blockHideIndex'],
+				'unblockHideIndex'       => $permissions['unblockHideIndex'],
+			];
+
+			$idBoolean[] = $permissions['edit_permit'] ? 0 : 1;
+			$_SESSION['idBollen'] = $idBoolean;
+		}
+
+		$this->set([
+			'admins'    => $adminArray,
+			'total'     => $total,
+			'status'    => $action,
+			'idBollen'  => $idBoolean,
+			'_serialize'=> ['admins', 'total', 'status', 'idBollen']
+		]);
+	}*/
+
+	public function getAllReport($action = 'all')
+	{
+		$this->request->allowMethod(['get', 'post']);
+		$this->viewBuilder()->setLayout('ajax');
+
+		// Get session
+		$session = $this->request->getSession();
 		
-		$adminArray = Set::extract($adminA, '{n}.Report');
-		$this->set('total', $count);  //send total to the view
-		for($i=0;$i<count($adminArray);$i++){
-			
-	            if($adminArray[$i]['client']!=0){
-		        $client=$this->Client->find('all', array('conditions' => array('id' =>$adminArray[$i]['client'])));
-		        $adminArray[$i]['client_name']=$client[0]['Client']['name'];
-		     }elseif($adminArray[$i]['client']==0){
-			$adminArray[$i]['client_name']='N/A';
-		     }
-		      $user=$this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$adminArray[$i]['created_by'])));
-		      if(count($user)>0){
-		        $adminArray[$i]['creater_name']=$user[0]['AdminMaster']['first_name']." ".$user[0]['AdminMaster']['last_name'];
-		      }else{
-			$adminArray[$i]['creater_name']='';
-		      }
-		  
+		if (!$session->check('admin_id')) {
+			$this->set([
+				'admins'    => [],
+				'total'     => 0,
+				'status'    => 'error',
+				'message'   => 'Session expired',
+				'_serialize'=> ['admins', 'total', 'status', 'message']
+			]);
+			return;
 		}
 
-		if($count==0){
-			$adminArray=array();
-		  }else{
-			 $adminArray = Set::extract($adminA, '{n}.Report');
-		  }
-	       $this->Session->write('idBollen',$idBoolen);
-		//$this->set('idBollen', $idBoolen);
-	        $this->set('admins', $adminArray);  //send products to the view
-		$this->set('status', $action);
+		$adminData = $session->read();
+		$loggedInAdminId = isset($adminData['AdminMaster']['id']) ? $adminData['AdminMaster']['id'] : null;
+		$loggedInRoleId  = isset($adminData['RoleMaster']['id']) ? $adminData['RoleMaster']['id'] : null;
+
+		$condition = ['Reports.isdeleted' => 'N'];
+
+		// Filtering
+		$filter = $this->request->getQuery('filter');
+		$value  = $this->request->getQuery('value');
+
+		if ($filter && $value) {
+			switch ($filter) {
+				case 'report_no':
+					$condition['UPPER(Reports.report_no) LIKE'] = strtoupper($value) . '%';
+					break;
+
+				case 'client_name':
+					$client = $this->Reports->Clients->find()
+						->where(['UPPER(Clients.name) LIKE' => strtoupper($value) . '%'])
+						->first();
+					if ($client) {
+						$condition['Reports.client'] = $client->id;
+					}
+					break;
+
+				case 'creater_name':
+					$names = explode(' ', $value);
+					$firstName = $names[0];
+					$lastName  = end($names);
+					$admin = $this->Reports->AdminMasters->find()
+						->where([
+							'AdminMasters.first_name LIKE' => "%{$firstName}%",
+							'AdminMasters.last_name LIKE'  => "%{$lastName}%"
+						])
+						->first();
+					if ($admin) {
+						$condition['Reports.created_by'] = $admin->id;
+					}
+					break;
+
+				case 'event_date_val':
+					$parts = explode('/', $value);
+					if (count($parts) === 3) {
+						$day   = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+						$month = str_pad($parts[1], 2, '0', STR_PAD_LEFT);
+						$year  = "20" . $parts[2];
+						$condition['Reports.event_date'] = "{$year}-{$month}-{$day}";
+					}
+					break;
+			}
+		}
+
+		// Get pagination parameters
+		$start = (int)($this->request->getQuery('start') ? $this->request->getQuery('start') : 0);
+		$limit = $this->request->getQuery('limit');
+		
+		// Convert limit properly
+		if ($limit === 'all' || $limit === null || $limit === '') {
+			$limit = 60;
+		} else {
+			$limit = (int)$limit;
+		}
+
+		// Calculate total count without pagination
+		$total = $this->Reports->find()->where($condition)->count();
+		
+		
+		// Query for paginated results
+		$reports = $this->Reports->find()
+			->contain(['Clients', 'AdminMasters', 'IncidentSeverities', 'HsseRemidials'])
+			->where($condition)
+			->order(['Reports.id' => 'DESC'])
+			->all();
+
+		$adminArray = [];
+		$idBoolean  = [];
+		
+		foreach ($reports as $rec) {
+			// Default permissions
+			$permissions = [
+				'edit_permit'     => false,
+				'view_permit'     => false,
+				'delete_permit'   => false,
+				'block_permit'    => false,
+				'unblock_permit'  => false,
+				'checkbox_permit' => false,
+				'blockHideIndex'  => true,
+				'unblockHideIndex'=> true,
+			];
+
+			if ($loggedInAdminId == $rec->created_by || $loggedInRoleId == 1) {
+				$permissions['blockHideIndex']   = $rec->isblocked === 'N';
+				$permissions['unblockHideIndex'] = $rec->isblocked !== 'N';
+			} else {
+				$permissions = array_map(fn($v) => true, $permissions);
+			}
+
+			// Format event date
+			$eventDate = $rec->event_date ? FrozenTime::parse($rec->event_date)->format('d/M/y') : '';
+
+			// Incident severity safe access
+			$incidentSeverity = '';
+			if (!empty($rec->incident_severity) && is_object($rec->incident_severity)) {
+				$incidentSeverity = '<font color="' . h($rec->incident_severity->color_code) . '">' .
+									h($rec->incident_severity->type) . '</font>';
+			}
+
+			// Client name safe access
+			$clientName = '';
+			if (!empty($rec->client) && is_object($rec->client)) {
+				$clientName = h($rec->client->name);
+			} else {
+				$clientName = 'N/A';
+			}
+
+			// Remidials counting
+			$remidial_close = $remidial_open = [];
+			foreach ($rec->hsse_remidials as $r) {
+				if ($r->remidial_closure_date !== '0000-00-00') {
+					$remidial_close[] = $r->id;
+				} else {
+					$remidial_open[] = $r->id;
+				}
+			}
+			$remidial_summary = count($remidial_close) . '/' . count($remidial_open);
+
+			// Prepare record for frontend
+			$adminArray[] = [
+				'id'                     => $rec->id,
+				'report_no'              => $rec->report_no,
+				'event_date'             => $rec->event_date,
+				'closure_date'           => $rec->closure_date,
+				'event_date_val'         => $eventDate,
+				'client'                 => $rec->client_id ?? null,
+				'client_name'            => $clientName,
+				'incident_severity_name' => $incidentSeverity,
+				'creater_name'           => $rec->admin_master
+					? $rec->admin_master->first_name . ' ' . $rec->admin_master->last_name
+					: '',
+				'remidial'               => $remidial_summary,
+				'summary'                => $rec->summary,
+				'isblocked'              => $rec->isblocked,
+				'edit_permit'            => $permissions['edit_permit'],
+				'view_permit'            => $permissions['view_permit'],
+				'delete_permit'          => $permissions['delete_permit'],
+				'block_permit'           => $permissions['block_permit'],
+				'unblock_permit'         => $permissions['unblock_permit'],
+				'checkbox_permit'        => $permissions['checkbox_permit'],
+				'blockHideIndex'         => $permissions['blockHideIndex'],
+				'unblockHideIndex'       => $permissions['unblockHideIndex'],
+			];
+
+			// Used for frontend disabling checkboxes if edit not allowed
+			$idBoolean[] = $permissions['edit_permit'] ? 0 : 1;
+		}
+
+		$_SESSION['idBollen'] = $idBoolean;
+
+		$this->set([
+			'admins'    => $adminArray,
+			'total'     => $total,
+			'status'    => $action,
+			'idBollen'  => $idBoolean,
+			'_serialize'=> ['admins', 'total', 'status', 'idBollen']
+		]);
 	}
 
-	
-	
-	
 	function report_block($id = null)
 	{
-          
-	
 		if(!$id)
 		{
 			  // $this->Session->setFlash('Invalid id for admin');
@@ -322,10 +559,7 @@ class ReportsController extends AppController
 		}
 		else
 		{
-			 $idArray = explode("^", $id);
-			 
-			 
-		
+			$idArray = explode("^", $id);
 			foreach($idArray as $id)
 			{
 				   $id = $id;
@@ -339,8 +573,6 @@ class ReportsController extends AppController
 	
 	function report_unblock($id = null)
 	{
-
-		
 		if(!$id)
 		{
 	
@@ -348,7 +580,6 @@ class ReportsController extends AppController
 		}
 		else
 		{
-			
 			
 			$idArray = explode("^", $id);
 		
@@ -365,64 +596,42 @@ class ReportsController extends AppController
 	}
 	
 	function main_delete()
-	     {
-		      $this->layout="ajax";
+	{
+		$this->layout="ajax";
 	      
-		      if($this->data['id']!=''){
+		if($this->data['id']!='')
+		{
 			$idArray = explode("^", $this->data['id']);
-                           foreach($idArray as $id)
-			       {
-					  $id = $id;
-					  $this->request->data['Report']['id'] =$id;
-					  $this->request->data['Report']['isdeleted'] = 'Y';
-											
-						 $deleteHsse_incident = "DELETE FROM `hsse_incidents` WHERE `report_id` = {$id}";
-                                                 $dHI=$this->HsseIncident->query($deleteHsse_incident);
-						 $deleteHsse_investigation_datas = "DELETE FROM `hsse_investigation_datas` WHERE `report_id` = {$id}";
-                                                 $dHINV=$this->HsseInvestigationData->query($deleteHsse_investigation_datas);
-                                                 $deleteHsse_personnel_datas = "DELETE FROM `hsse_personnels` WHERE `report_id` = {$id}";
-                                                 $dHP=$this->HssePersonnel->query($deleteHsse_personnel_datas);
-					         $deleteHsse_remidials = "DELETE FROM `hsse_remidials` WHERE `report_no` = {$id}";
-                                                 $dHR=$this->HsseRemidial->query($deleteHsse_remidials);
-			
-				                 $deleteHsse_attachments = "DELETE FROM `hsse_attachments` WHERE `report_id` = {$id}";
-                                                 $dHA=$this->HsseAttachment->query($deleteHsse_attachments);
-			                         
-						 $deleteHsse_clients = "DELETE FROM `hsse_clients` WHERE `report_id` = {$id}";
-                                                 $dHC=$this->HsseClient->query( $deleteHsse_clients);
-						 
-						 $deleteHsse_remidials_email = "DELETE FROM `remidial_email_lists` WHERE `report_id` = {$id} AND `report_type`='hsse'";
-                                                 $dHRem=$this->RemidialEmailList->query($deleteHsse_remidials_email);
-						 
-						 
-						 $deleteHsse_mains = "DELETE FROM `reports` WHERE `id` = {$id}";
-                                                 $dHC=$this->Report->query($deleteHsse_mains);
-				    
-					
-					
-					
-					  
-					  
-			       }
-		
-			       echo 'ok';
-			        exit;
-		      }else{
-			 $this->redirect(array('action'=>report_hsse_list), null, true);
-		      }
-			 
-			      
-			      
-			       
+            foreach($idArray as $id)
+			{
+				$id = $id;
+				$this->request->data['Report']['id'] =$id;
+				$this->request->data['Report']['isdeleted'] = 'Y';
+				$deleteHsse_incident = "DELETE FROM `hsse_incidents` WHERE `report_id` = {$id}";
+                $dHI=$this->HsseIncident->query($deleteHsse_incident);
+				$deleteHsse_investigation_datas = "DELETE FROM `hsse_investigation_datas` WHERE `report_id` = {$id}";
+				$dHINV=$this->HsseInvestigationData->query($deleteHsse_investigation_datas);
+				$deleteHsse_personnel_datas = "DELETE FROM `hsse_personnels` WHERE `report_id` = {$id}";
+				$dHP=$this->HssePersonnel->query($deleteHsse_personnel_datas);
+				$deleteHsse_remidials = "DELETE FROM `hsse_remidials` WHERE `report_no` = {$id}";
+				$dHR=$this->HsseRemidial->query($deleteHsse_remidials);
+				$deleteHsse_attachments = "DELETE FROM `hsse_attachments` WHERE `report_id` = {$id}";
+				$dHA=$this->HsseAttachment->query($deleteHsse_attachments);
+				$deleteHsse_clients = "DELETE FROM `hsse_clients` WHERE `report_id` = {$id}";
+				$dHC=$this->HsseClient->query( $deleteHsse_clients);
+				$deleteHsse_remidials_email = "DELETE FROM `remidial_email_lists` WHERE `report_id` = {$id} AND `report_type`='hsse'";
+                $dHRem=$this->RemidialEmailList->query($deleteHsse_remidials_email);
+				$deleteHsse_mains = "DELETE FROM `reports` WHERE `id` = {$id}";
+                $dHC=$this->Report->query($deleteHsse_mains); 
+			}
+			echo 'ok';
+			exit;
+		}
+		else
+		{
+			$this->redirect(array('action'=>report_hsse_list), null, true);
+		}		       
 	}
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	function displayteam()
 	{
@@ -439,615 +648,842 @@ class ReportsController extends AppController
 			
 		}		
 	}	
-	
-	
-        public function add_report_main($id=null)
-	
+	/*public function addReportMain($id=null)
 	{        
 	      
-		 $this->_checkAdminSession();
-		 $this->grid_access();
-		 $this->_getRoleMenuPermission();
-                 $this->layout="after_adminlogin_template";
-	          $incidentDetail = $this->Incident->find('all', array('conditions' => array('incident_type' =>'hsse')));
-		 $businessDetail = $this->BusinessType->find('all',array('conditions' => array('rtype' =>'all')));
-		 $fieldlocationDetail = $this->Fieldlocation->find('all');
-		 $clientDetail = $this->Client->find('all');
-		 $incidentSeverityDetail = $this->IncidentSeverity->find('all',array('conditions' => array('servrity_type' =>'ssh')));
+		$this->_checkAdminSession();
+		$this->grid_access();
+		$this->_getRoleMenuPermission();
+        $this->layout="after_adminlogin_template";
+	    $incidentDetail = $this->Incident->find('all', array('conditions' => array('incident_type' =>'hsse')));
+		$businessDetail = $this->BusinessType->find('all',array('conditions' => array('rtype' =>'all')));
+		$fieldlocationDetail = $this->Fieldlocation->find('all');
+		$clientDetail = $this->Client->find('all');
+		$incidentSeverityDetail = $this->IncidentSeverity->find('all',array('conditions' => array('servrity_type' =>'ssh')));
 
-		 $residualDetail = $this->Residual->find('all');
-		 $potentialDetail = $this->Potential->find('all');
-		 $countryDetail = $this->Country->find('all');
-		 $userDetail = $this->AdminMaster->find('all');
-		 $this->set('residualDetail',$residualDetail);
-		 $this->set('potentialDetail',$potentialDetail);
-		 $this->set('incidentDetail',$incidentDetail);
-		 $this->set('businessDetail',$businessDetail);
-		 $this->set('fieldlocationDetail',$fieldlocationDetail);
-		 $this->set('clientDetail',$clientDetail);
-		 $this->set('country',$countryDetail);
-		 $this->set('userDetail',$userDetail);
-		 $this->set('incidentSeverityDetail',$incidentSeverityDetail);
-		 $clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
+		$residualDetail = $this->Residual->find('all');
+		$potentialDetail = $this->Potential->find('all');
+		$countryDetail = $this->Country->find('all');
+		$userDetail = $this->AdminMaster->find('all');
+		$this->set('residualDetail',$residualDetail);
+		$this->set('potentialDetail',$potentialDetail);
+		$this->set('incidentDetail',$incidentDetail);
+		$this->set('businessDetail',$businessDetail);
+		$this->set('fieldlocationDetail',$fieldlocationDetail);
+		$this->set('clientDetail',$clientDetail);
+		$this->set('country',$countryDetail);
+		$this->set('userDetail',$userDetail);
+		$this->set('incidentSeverityDetail',$incidentSeverityDetail);
+		$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
 		    
-		  if(count($clientdetail)>0){
-			 if($clientdetail[0]['HsseClient']['clientreviewed']==3){
-			      $this->set('client_feedback',1);
-		           }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
-			      $this->set('client_feedback',0);
+		if(count($clientdetail)>0){
+			if($clientdetail[0]['HsseClient']['clientreviewed']==3){
+			    $this->set('client_feedback',1);
+		    }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
+			    $this->set('client_feedback',0);
+			}
 			
-		          }
-			
-		  }else{
+		}else{
 			$this->set('client_feedback',0);
-		  }
+		}
 		if($id==null)
 		{
-          
-		  $this->set('id','0');
-		  $this->set('event_date','');
-		  $this->set('since_event_hidden',0);
-		  $this->set('heading','Add HSSE Report (Main)');
-		  $this->set('button','Submit');
-		  $this->set('report_no','');
-  		  $this->set('closer_date','00-00-0000');
-		  $this->set('incident_type','');
-		  $this->set('created_date','');
-		  $this->set('business_unit','');
-		  $this->set('client','');
-		  $this->set('field_location','');
-		  $this->set('incident_severity','');
-		  $this->set('recordable','');
-		  $this->set('potential','');
-		  $this->set('residual','');
-		  $this->set('potential','');
-		  $this->set('summary','');
-		  $this->set('details','');
-		  $this->set('reporter','');
-		  $this->set('cnt',13);
-		  $this->set('created_by',$_SESSION['adminData']['AdminMaster']['first_name']." ".$_SESSION['adminData']['AdminMaster']['last_name']);
-		  $reportno=date('YmdHis');
-		  $this->set('reportno',$reportno);
+          	$this->set('id','0');
+			$this->set('event_date','');
+			$this->set('since_event_hidden',0);
+			$this->set('heading','Add HSSE Report (Main)');
+			$this->set('button','Submit');
+			$this->set('report_no','');
+			$this->set('closer_date','00-00-0000');
+			$this->set('incident_type','');
+			$this->set('created_date','');
+			$this->set('business_unit','');
+			$this->set('client','');
+			$this->set('field_location','');
+			$this->set('incident_severity','');
+			$this->set('recordable','');
+			$this->set('potential','');
+			$this->set('residual','');
+			$this->set('potential','');
+			$this->set('summary','');
+			$this->set('details','');
+			$this->set('reporter','');
+			$this->set('cnt',13);
+			$this->set('created_by',$_SESSION['adminData']['AdminMaster']['first_name']." ".$_SESSION['adminData']['AdminMaster']['last_name']);
+			$reportno=date('YmdHis');
+			$this->set('reportno',$reportno);
 		 
-		 }else if(base64_decode($id)!=null){
-			
-	          $this->hsse_client_tab();
-		  $reportdetail = $this->Report->find('all', array('conditions' => array('Report.id' =>base64_decode($id))));
-                  $adminDATA = $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['created_by'])));
-		  $this->Session->write('report_create',$reportdetail[0]['Report']['created_by']);
-		   if($reportdetail[0]['Report']['client']==9){
-			$this->set('clienttab',0);
+		}else if(base64_decode($id)!=null)
+		{
+			$this->hsse_client_tab();
+		  	$reportdetail = $this->Report->find('all', array('conditions' => array('Report.id' =>base64_decode($id))));
+            $adminDATA = $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['created_by'])));
+		  	$this->Session->write('report_create',$reportdetail[0]['Report']['created_by']);
+		   	if($reportdetail[0]['Report']['client']==9){
+				$this->set('clienttab',0);
 			
 		    }else if($reportdetail[0]['Report']['client']!=9){
-			$this->set('clienttab',1);
-			
-		    }
-		  
-		  
+				$this->set('clienttab',1);
+			}
 		    $clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
 		    
-		  if(count($clientdetail)>0){
-			 if($clientdetail[0]['HsseClient']['clientreviewed']==3){
-			      $this->set('client_feedback',1);
-		           }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
-			      $this->set('client_feedback',0);
-			
-		          }
-			
-		  }else{
-			$this->set('client_feedback',0);
+		  	if(count($clientdetail)>0){
+			 	if($clientdetail[0]['HsseClient']['clientreviewed']==3){
+			      	$this->set('client_feedback',1);
+		        }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
+			      	$this->set('client_feedback',0);
+				}
+			}else{
+				$this->set('client_feedback',0);
 			}
-		 
+
+			$this->set('id',base64_decode($id));
+			if($reportdetail[0]['Report']['closer_date']!=''){
+				$crtd=explode("-",$reportdetail[0]['Report']['closer_date']);
+				$closedt=$crtd[1]."-".$crtd[2]."-".$crtd[0];
+			}else{
+				$closedt='';	
+			}
 		  
-		  
-		  $this->set('id',base64_decode($id));
-		  if($reportdetail[0]['Report']['closer_date']!=''){
-		  $crtd=explode("-",$reportdetail[0]['Report']['closer_date']);
-		  $closedt=$crtd[1]."-".$crtd[2]."-".$crtd[0];
-		  }else{
-		  $closedt='';	
-		  }
-		  
-		 if($reportdetail[0]['Report']['event_date']!=''){
-		  
-		  $evndt=explode("-",$reportdetail[0]['Report']['event_date']);
-		  $event_date=$evndt[1]."-".$evndt[2]."-".$evndt[0];
-		  
-		  }else{
-		  $event_date=''; 	
-		  }
-	  	  $this->set('event_date',$event_date);
-		  $this->set('since_event_hidden',$reportdetail[0]['Report']['since_event']);
-		  $this->set('since_event',$reportdetail[0]['Report']['since_event']);
-		  $this->set('heading','Update HSSE Report (Main)');
-		  $this->set('button','Update');
-		  $this->set('reportno',$reportdetail[0]['Report']['report_no']);
-  		  $this->set('closer_date',$closedt);
-		  $this->set('incident_type',$reportdetail[0]['Report']['incident_type']);
-	          $this->set('cnt',$reportdetail[0]['Report']['country']);
-		  $this->set('created_date','');
-		  $this->set('business_unit',$reportdetail[0]['Report']['business_unit']);
-		  $this->set('client',$reportdetail[0]['Report']['client']);
-		   
-		  
-		  $this->set('field_location',$reportdetail[0]['Report']['field_location']);
-		  $this->set('incident_severity',$reportdetail[0]['Report']['incident_severity']);
-		  $this->set('recordable',$reportdetail[0]['Report']['recorable']);
-		  $this->set('potential',$reportdetail[0]['Report']['potential']);
-		  $this->set('residual',$reportdetail[0]['Report']['residual']);
-		  $this->set('summary',$reportdetail[0]['Report']['summary']);
-		  $this->set('details',$reportdetail[0]['Report']['details']);
-		  $this->set('reporter',$reportdetail[0]['Report']['reporter']);
-		  $this->set('created_by',$adminDATA[0]['AdminMaster']['first_name']." ".$adminDATA[0]['AdminMaster']['last_name']);
-		 
-		 
-		 }
+		 	if($reportdetail[0]['Report']['event_date']!=''){
+		  		$evndt=explode("-",$reportdetail[0]['Report']['event_date']);
+		  		$event_date=$evndt[1]."-".$evndt[2]."-".$evndt[0];
+		  	}else{
+				$event_date=''; 	
+			}
+			$this->set('event_date',$event_date);
+			$this->set('since_event_hidden',$reportdetail[0]['Report']['since_event']);
+			$this->set('since_event',$reportdetail[0]['Report']['since_event']);
+			$this->set('heading','Update HSSE Report (Main)');
+			$this->set('button','Update');
+			$this->set('reportno',$reportdetail[0]['Report']['report_no']);
+			$this->set('closer_date',$closedt);
+			$this->set('incident_type',$reportdetail[0]['Report']['incident_type']);
+				$this->set('cnt',$reportdetail[0]['Report']['country']);
+			$this->set('created_date','');
+			$this->set('business_unit',$reportdetail[0]['Report']['business_unit']);
+			$this->set('client',$reportdetail[0]['Report']['client']);
+			
+			
+			$this->set('field_location',$reportdetail[0]['Report']['field_location']);
+			$this->set('incident_severity',$reportdetail[0]['Report']['incident_severity']);
+			$this->set('recordable',$reportdetail[0]['Report']['recorable']);
+			$this->set('potential',$reportdetail[0]['Report']['potential']);
+			$this->set('residual',$reportdetail[0]['Report']['residual']);
+			$this->set('summary',$reportdetail[0]['Report']['summary']);
+			$this->set('details',$reportdetail[0]['Report']['details']);
+			$this->set('reporter',$reportdetail[0]['Report']['reporter']);
+			$this->set('created_by',$adminDATA[0]['AdminMaster']['first_name']." ".$adminDATA[0]['AdminMaster']['last_name']);
+		}
+	}*/
+
+	/*public function addReportMain($id = null)
+	{
+		$this->_checkAdminSession();
+		$this->grid_access();
+		$this->_getRoleMenuPermission();
+		//dd($id);
+		// Load data
+		$incidentDetail = $this->Incident->find()->where(['incident_type' => 'hsse'])->all();
+		$businessDetail = $this->BusinessType->find()->where(['rtype' => 'all'])->all();
+		$fieldlocationDetail = $this->Fieldlocation->find()->all();
+		$clientDetail = $this->Client->find()->all();
+		$incidentSeverityDetail = $this->IncidentSeverity->find()->where(['servrity_type' => 'ssh'])->all();
+		$residualDetail = $this->Residual->find()->all();
+		$potentialDetail = $this->Potential->find()->all();
+		$countryDetail = $this->Country->find()->all();
+		$userDetail = $this->AdminMasters->find()->all();
+
+		$this->set(compact(
+			'residualDetail',
+			'potentialDetail',
+			'incidentDetail',
+			'businessDetail',
+			'fieldlocationDetail',
+			'clientDetail',
+			'countryDetail',
+			'userDetail',
+			'incidentSeverityDetail'
+		));
+
+		$decodedId = $id ? base64_decode($id) : null;
+
+		// Check for client feedback
+		$clientFeedback = 0;
+		if ($decodedId) {
+			$clientDetailHsse = $this->HsseClient->find()->where(['report_id' => $decodedId])->first();
+			if ($clientDetailHsse) {
+				$clientFeedback = ($clientDetailHsse->clientreviewed == 3) ? 1 : 0;
+			}
+		}
+		$this->set('client_feedback', $clientFeedback);
+
+		// If no ID — Add new report
+		if ($decodedId === null) {
+			$adminData = $session->read('adminData.AdminMaster');
+        	$adminName = $adminData['first_name'] . ' ' . $adminData['last_name'];
+
+			$reportno = date('YmdHis');
+
+			$this->set([
+				'id' => 0,
+				'event_date' => '',
+				'since_event_hidden' => 0,
+				'heading' => 'Add HSSE Report (Main)',
+				'button' => 'Submit',
+				'report_no' => '',
+				'closer_date' => '00-00-0000',
+				'incident_type' => '',
+				'created_date' => '',
+				'business_unit' => '',
+				'client' => '',
+				'field_location' => '',
+				'incident_severity' => '',
+				'recordable' => '',
+				'potential' => '',
+				'residual' => '',
+				'summary' => '',
+				'details' => '',
+				'reporter' => '',
+				'cnt' => 13,
+				'created_by' => $adminName,
+				'reportno' => $reportno
+			]);
+			return;
+		} 
+		// else 
+		// {
+		// 	// Editing existing report
+		// 	$this->hsse_client_tab();
+
+		// 	$reportdetail = $this->Report->find()
+		// 		->where(['Report.id' => $decodedId])
+		// 		->contain(['AdminMasters'])
+		// 		->first();
+
+		// 	if (!$reportdetail) {
+		// 		$this->Flash->error(__('Report not found.'));
+		// 		return $this->redirect(['action' => 'index']);
+		// 	}
+
+		// 	$this->request->getSession()->write('report_create', $reportdetail->created_by);
+
+		// 	$clienttab = ($reportdetail->client == 9) ? 0 : 1;
+		// 	$this->set('clienttab', $clienttab);
+
+		// 	// Fetch admin details
+		// 	$adminDATA = $this->AdminMaster->find()
+		// 		->where(['AdminMaster.id' => $reportdetail->created_by])
+		// 		->first();
+
+		// 	$closedt = '';
+		// 	if (!empty($reportdetail->closer_date)) {
+		// 		$crtd = explode('-', $reportdetail->closer_date);
+		// 		$closedt = $crtd[1] . '-' . $crtd[2] . '-' . $crtd[0];
+		// 	}
+
+		// 	$event_date = '';
+		// 	if (!empty($reportdetail->event_date)) {
+		// 		$evndt = explode('-', $reportdetail->event_date);
+		// 		$event_date = $evndt[1] . '-' . $evndt[2] . '-' . $evndt[0];
+		// 	}
+
+		// 	$this->set([
+		// 		'id' => $decodedId,
+		// 		'event_date' => $event_date,
+		// 		'since_event_hidden' => $reportdetail->since_event,
+		// 		'since_event' => $reportdetail->since_event,
+		// 		'heading' => 'Update HSSE Report (Main)',
+		// 		'button' => 'Update',
+		// 		'reportno' => $reportdetail->report_no,
+		// 		'closer_date' => $closedt,
+		// 		'incident_type' => $reportdetail->incident_type,
+		// 		'cnt' => $reportdetail->country,
+		// 		'created_date' => '',
+		// 		'business_unit' => $reportdetail->business_unit,
+		// 		'client' => $reportdetail->client,
+		// 		'field_location' => $reportdetail->field_location,
+		// 		'incident_severity' => $reportdetail->incident_severity,
+		// 		'recordable' => $reportdetail->recorable,
+		// 		'potential' => $reportdetail->potential,
+		// 		'residual' => $reportdetail->residual,
+		// 		'summary' => $reportdetail->summary,
+		// 		'details' => $reportdetail->details,
+		// 		'reporter' => $reportdetail->reporter,
+		// 		'created_by' => $adminDATA
+		// 			? $adminDATA->first_name . ' ' . $adminDATA->last_name
+		// 			: ''
+		// 	]);
+		// }
+		$this->hsse_client_tab();
+
+		$reportDetail = $this->Reports->find()
+			->where(['Reports.id' => $decodedId])
+			->contain(['AdminMasters'])
+			->first();
+
+		if (!$reportDetail) {
+			$this->Flash->error(__('Report not found.'));
+			return $this->redirect(['action' => 'index']);
+		}
+
+		$this->request->getSession()->write('report_create', $reportDetail->created_by);
+
+		$clientTab = ($reportDetail->client == 9) ? 0 : 1;
+		$this->set('clienttab', $clientTab);
+
+		$adminData = $this->AdminMasters->get($reportDetail->created_by);
+
+		// Format dates
+		$closedt = '';
+		if (!empty($reportDetail->closer_date) && strpos($reportDetail->closer_date, '-') !== false) {
+			$parts = explode('-', $reportDetail->closer_date);
+			if (count($parts) === 3) {
+				[$y, $m, $d] = $parts;
+				$closedt = "$m-$d-$y";
+			}
+		}
+
+		$eventDate = '';
+		if (!empty($reportDetail->event_date) && strpos($reportDetail->event_date, '-') !== false) {
+			$parts = explode('-', $reportDetail->event_date);
+			if (count($parts) === 3) {
+				[$y, $m, $d] = $parts;
+				$eventDate = "$m-$d-$y";
+			}
+		}
+
+		$this->set([
+			'id' => $decodedId,
+			'event_date' => $eventDate,
+			'since_event_hidden' => $reportDetail->since_event,
+			'since_event' => $reportDetail->since_event,
+			'heading' => 'Update HSSE Report (Main)',
+			'button' => 'Update',
+			'reportno' => $reportDetail->report_no,
+			'closer_date' => $closedt,
+			'incident_type' => $reportDetail->incident_type,
+			'cnt' => $reportDetail->country,
+			'created_date' => '',
+			'business_unit' => $reportDetail->business_unit,
+			'client' => $reportDetail->client,
+			'field_location' => $reportDetail->field_location,
+			'incident_severity' => $reportDetail->incident_severity,
+			'recordable' => $reportDetail->recorable,
+			'potential' => $reportDetail->potential,
+			'residual' => $reportDetail->residual,
+			'summary' => $reportDetail->summary,
+			'details' => $reportDetail->details,
+			'reporter' => $reportDetail->reporter,
+			'created_by' => $adminData->first_name . ' ' . $adminData->last_name
+		]);
+	}*/
+
+	public function addReportMain($id = null)
+	{
+		// Check admin session & permissions
+		$this->_checkAdminSession();
+		$this->grid_access();
+		$this->_getRoleMenuPermission();
+		// Load all necessary data
+		$incidentDetail = $this->Incident->find()->where(['incident_type' => 'hsse'])->all();
+		$businessDetail = $this->BusinessType->find()->where(['rtype' => 'all'])->all();
+		$fieldlocationDetail = $this->Fieldlocation->find()->all();
+		$clientDetail = $this->Client->find()->all();
+		$incidentSeverityDetail = $this->IncidentSeverity->find()->where(['servrity_type' => 'ssh'])->all();
+		$residualDetail = $this->Residual->find()->all();
+		$potentialDetail = $this->Potential->find()->all();
+		$countryDetail = $this->Country->find()->all();
+		$userDetail = $this->AdminMasters->find()->all();
+		$this->set(compact(
+			'residualDetail',
+			'potentialDetail',
+			'incidentDetail',
+			'businessDetail',
+			'fieldlocationDetail',
+			'clientDetail',
+			'countryDetail',
+			'userDetail',
+			'incidentSeverityDetail'
+		));
+
+		// Decode ID if present
+		$decodedId = $id ? base64_decode($id) : null;
+		
+		// Check for client feedback
+		$clientFeedback = 0;
+		if ($decodedId) {
+			$clientDetailHsse = $this->HsseClient->find()
+				->where(['report_id' => $decodedId])
+				->first();
+			if ($clientDetailHsse) {
+				$clientFeedback = ($clientDetailHsse->clientreviewed == 3) ? 1 : 0;
+			}
+		}
+		$this->set('client_feedback', $clientFeedback);
+
+		$session = $this->request->getSession();
+		// If no ID — Add new report
+		if ($decodedId === null) {
+			$adminData = $session->read('adminData');
+			$adminName = $adminData['first_name'] . ' ' . $adminData['last_name'];
+			$reportNo = date('YmdHis');
+
+			$this->set([
+				'id' => 0,
+				'event_date' => '',
+				'since_event_hidden' => 0,
+				'heading' => 'Add HSSE Report (Main)',
+				'button' => 'Submit',
+				'report_no' => '',
+				'closer_date' => '00-00-0000',
+				'incident_type' => '',
+				'created_date' => '',
+				'business_unit' => '',
+				'client' => '',
+				'field_location' => '',
+				'incident_severity' => '',
+				'recordable' => '',
+				'potential' => '',
+				'residual' => '',
+				'summary' => '',
+				'details' => '',
+				'reporter' => '',
+				'cnt' => 13,
+				'created_by' => $adminName,
+				'reportno' => $reportNo
+			]);
+			return;
+		}
+		
+		// Editing existing report
+		// $this->hsse_client_tab();
+
+		$reportDetail = $this->Reports->get($decodedId, [
+			'contain' => ['AdminMasters']
+		]);
+		if (!$reportDetail) {
+			$this->Flash->error(__('Report not found.'));
+			return $this->redirect(['action' => 'index']);
+		}
+
+		$session->write('report_create', $reportDetail->created_by);
+		$clientTab = ($reportDetail->client == 9) ? 0 : 1;
+		$this->set('clienttab', $clientTab);
+		$adminData = $this->AdminMasters->get($reportDetail->created_by);
+		// Format dates from Y-m-d to m-d-Y
+		$formatDate = function ($date) {
+			if (!empty($date) && strpos($date, '-') !== false) {
+				$parts = explode('-', $date);
+				if (count($parts) === 3) {
+					return "{$parts[1]}-{$parts[2]}-{$parts[0]}";
+				}
+			}
+			return '';
+		};
+
+		// dd('qety');
+
+		$closedDate = $formatDate($reportDetail->closer_date);
+		$eventDate = $formatDate($reportDetail->event_date);
+		// dd('qety');
+
+
+		$this->set([
+			'id' => $decodedId,
+			'event_date' => $eventDate,
+			'since_event_hidden' => $reportDetail->since_event,
+			'since_event' => $reportDetail->since_event,
+			'heading' => 'Update HSSE Report (Main)',
+			'button' => 'Update',
+			'reportno' => $reportDetail->report_no,
+			'closer_date' => $closedDate,
+			'incident_type' => $reportDetail->incident_type,
+			'cnt' => $reportDetail->country,
+			'created_date' => '',
+			'business_unit' => $reportDetail->business_unit,
+			'client' => $reportDetail->client,
+			'field_location' => $reportDetail->field_location,
+			'incident_severity' => $reportDetail->incident_severity,
+			'recordable' => $reportDetail->recorable,
+			'potential' => $reportDetail->potential,
+			'residual' => $reportDetail->residual,
+			'summary' => $reportDetail->summary,
+			'details' => $reportDetail->details,
+			'reporter' => $reportDetail->reporter,
+			'created_by' => $adminData->first_name . ' ' . $adminData->last_name
+		]);
 	}
+
+
 	function reportprocess()
-	 { 
-	   $this->layout = "ajax";
-	   $this->_checkAdminSession();
-	   $reportData=array();
-	   
-          if($this->data['add_report_main_form']['id']==0){
-		   $res='add';
- 	                
-	   }else{
+	{ 
+		$this->layout = "ajax";
+		$this->_checkAdminSession();
+		$reportData=array();
+	    if($this->data['add_report_main_form']['id']==0){
+		   	$res='add';
+ 	    }else{
 		   $res='update';
 		   $reportData['Report']['id']=$this->data['add_report_main_form']['id'];
-		  
-	    }
-	    
-	     
-	     
-         if($this->data['event_date']!=''){
-           $evndate=explode("-",$this->data['event_date']);
-	   $reportData['Report']['event_date']=$evndate[2]."-".$evndate[0]."-".$evndate[1];
-	   }else{
-	   $reportData['Report']['event_date']='';	
-	   }
-	   
-	   
-	  if(isset($this->data['closer_date'])){
-	     $clsdate=explode("-",$this->data['closer_date']);
-	     $reportData['Report']['closer_date']=$clsdate[2]."-".$clsdate[0]."-".$clsdate[1];
-	   }else{
-	     $reportData['Report']['closer_date']='0000-00-00';	
-	   }
-	   $reportData['Report']['incident_type']=$this->data['incident_type']; 
-	   $reportData['Report']['business_unit'] =$this->data['business_unit'];  
-	   $reportData['Report']['client']=$this->data['client'];
-	   $reportData['Report']['field_location']=$this->data['field_location'];
-	   $reportData['Report']['country']=$this->data['country'];
-	   $reportData['Report']['reporter']=$this->data['reporter'];
-	   $reportData['Report']['incident_severity']=$this->data['incident_severity'];
-	   $reportData['Report']['recorable']=$this->data['recorable'];
-	   $reportData['Report']['report_no']=$this->data['report_no']; 
-	   $reportData['Report']['since_event']=$this->data['since_event'];
-	   $reportData['Report']['created_by']=$_SESSION['adminData']['AdminMaster']['id'];
-	   $reportData['Report']['reporter']=$this->data['reporter'];
-	   $reportData['Report']['potential']=$this->data['potential'];
-	   $reportData['Report']['residual']=$this->data['residual'];
-	   $reportData['Report']['summary']=$this->data['add_report_main_form']['summary'];
-	   $reportData['Report']['details']=$this->data['add_report_main_form']['details'];
-	   
-	  if($this->Report->save($reportData)){
-		 if($res=='add'){
-			 $lastReport=base64_encode($this->Report->getLastInsertId());
-		 }elseif($res=='update'){
-			 $lastReport=base64_encode($this->data['add_report_main_form']['id']);
-		 }
-		 
-		if($this->data['client']==0){
-			$redirect='Personal';
-		}elseif($this->data['client']!=0){
-			$redirect='Client';
-			
 		}
-		echo $res."~".$lastReport."~".$redirect;
-	    }else{
-		echo 'fail~0~0';
-	    }
+	    if($this->data['event_date']!=''){
+           	$evndate=explode("-",$this->data['event_date']);
+	   		$reportData['Report']['event_date']=$evndate[2]."-".$evndate[0]."-".$evndate[1];
+	   	}else{
+	   		$reportData['Report']['event_date']='';	
+	   	}
+	   
+	   
+	  	if(isset($this->data['closer_date'])){
+	     	$clsdate=explode("-",$this->data['closer_date']);
+	     	$reportData['Report']['closer_date']=$clsdate[2]."-".$clsdate[0]."-".$clsdate[1];
+	   	}else{
+	     	$reportData['Report']['closer_date']='0000-00-00';	
+	   	}
+		$reportData['Report']['incident_type']=$this->data['incident_type']; 
+		$reportData['Report']['business_unit'] =$this->data['business_unit'];  
+		$reportData['Report']['client']=$this->data['client'];
+		$reportData['Report']['field_location']=$this->data['field_location'];
+		$reportData['Report']['country']=$this->data['country'];
+		$reportData['Report']['reporter']=$this->data['reporter'];
+		$reportData['Report']['incident_severity']=$this->data['incident_severity'];
+		$reportData['Report']['recorable']=$this->data['recorable'];
+		$reportData['Report']['report_no']=$this->data['report_no']; 
+		$reportData['Report']['since_event']=$this->data['since_event'];
+		$reportData['Report']['created_by']=$_SESSION['adminData']['AdminMaster']['id'];
+		$reportData['Report']['reporter']=$this->data['reporter'];
+		$reportData['Report']['potential']=$this->data['potential'];
+		$reportData['Report']['residual']=$this->data['residual'];
+		$reportData['Report']['summary']=$this->data['add_report_main_form']['summary'];
+		$reportData['Report']['details']=$this->data['add_report_main_form']['details'];
+	   
+	  	if($this->Report->save($reportData))
+		{
+		 	if($res=='add'){
+			 	$lastReport=base64_encode($this->Report->getLastInsertId());
+		 	}elseif($res=='update'){
+			 	$lastReport=base64_encode($this->data['add_report_main_form']['id']);
+		 	}
+		 
+			if($this->data['client']==0){
+				$redirect='Personal';
+			}elseif($this->data['client']!=0){
+				$redirect='Client';
+			}
+			echo $res."~".$lastReport."~".$redirect;
+	    }else
+		{
+			echo 'fail~0~0';
+		}
                 
 		
 	   exit;
 	}
 	
-	 public function add_report_client($id=null){
-		 $this->_checkAdminSession();
-         	 $this->_getRoleMenuPermission();
-		 $this->grid_access();
-                 $this->layout="after_adminlogin_template";
-		 $this->set('id','0');
-		
-		   $reportdetail = $this->Report->find('all', array('conditions' => array('Report.id' =>base64_decode($id))));
-		   $clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
-		   
-		    
-         	   $this->set('report_number',$reportdetail[0]['Report']['report_no']); 
-		   if(count($clientdetail)>0){
-			
-			    $this->set('heading','Update Client Data');
-		            $this->set('button','Update');
-			    $this->set('id',$clientdetail[0]['HsseClient']['id']);
-		            $this->set('well',$clientdetail[0]['HsseClient']['well']);
-		            $this->set('rig',$clientdetail[0]['HsseClient']['rig']);
-		            $this->set('clientncr',$clientdetail[0]['HsseClient']['clientncr']);
-		            $this->set('clientreviewed',$clientdetail[0]['HsseClient']['clientreviewed']);
-  		            $this->set('report_id',$clientdetail[0]['HsseClient']['report_id']);
-			    
-			    
-			    if($clientdetail[0]['HsseClient']['clientreviewed']==3){
+	public function add_report_client($id=null){
+		$this->_checkAdminSession();
+        $this->_getRoleMenuPermission();
+		$this->grid_access();
+    	$this->layout="after_adminlogin_template";
+		$this->set('id','0');
+		$reportdetail = $this->Reports->find('all', 
+			array('conditions' => 
+			array('Reports.id' =>base64_decode($id))
+			)
+		);
+		$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
+		$this->set('report_number',$reportdetail[0]['Report']['report_no']); 
+		if(count($clientdetail)>0){
+			$this->set('heading','Update Client Data');
+		    $this->set('button','Update');
+			$this->set('id',$clientdetail[0]['HsseClient']['id']);
+			$this->set('well',$clientdetail[0]['HsseClient']['well']);
+			$this->set('rig',$clientdetail[0]['HsseClient']['rig']);
+			$this->set('clientncr',$clientdetail[0]['HsseClient']['clientncr']);
+			$this->set('clientreviewed',$clientdetail[0]['HsseClient']['clientreviewed']);
+			$this->set('report_id',$clientdetail[0]['HsseClient']['report_id']);
+			if($clientdetail[0]['HsseClient']['clientreviewed']==3){
 				$this->set('clientreviewed_style','style="display:block"');
 				$this->set('clientreviewer',$clientdetail[0]['HsseClient']['clientreviewer']);
 				$this->set('client_feedback',1);
-			     }else{
+			}else{
 				$this->set('clientreviewed_style','style="display:none"');
 				$this->set('clientreviewer','');
 				$this->set('client_feedback',0);
-			     }
-			            
-			    $this->set('wellsiterep',$clientdetail[0]['HsseClient']['wellsiterep']);
-			
-                          
-	                }else{
-			    $this->set('heading','Add Client Data');
-		            $this->set('button','Submit');
-			    $this->set('id',0);
-		            $this->set('well','');
-		            $this->set('rig','');
-		            $this->set('clientncr','');
-		            $this->set('clientreviewed',1);
-  		            $this->set('report_id',base64_decode($id));
-		            $this->set('clientreviewer','');
-			    $this->set('wellsiterep','');
-			    $this->set('clientreviewed_style','style="display:none"');
-			    $this->set('client_feedback',0);
-			    
-		       }
-	
-		 
-	        }
-	 
-	        function hsseclientprocess(){ 
-	                $this->layout = "ajax";
-	                $this->_checkAdminSession();
-	                $hsseClientData=array();
-	         	$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>$this->data['report_id'])));
-				if(count($clientdetail)>0){
-				       $res='update';
-				       $hsseClientData['HsseClient']['id']=$clientdetail[0]['HsseClient']['id'];
-				}else{
-				       $res='add';
-				}
-					$hsseClientData['HsseClient']['well']=$this->data['well']; 
-					$hsseClientData['HsseClient']['rig'] =$this->data['rig'];  
-					$hsseClientData['HsseClient']['clientncr']=$this->data['clientncr'];
-					$hsseClientData['HsseClient']['clientreviewed']=$this->data['clientreviewed'];
-					$hsseClientData['HsseClient']['report_id']=$this->data['report_id'];
-					$hsseClientData['HsseClient']['clientreviewer']=$this->data['clientreviewer'];
-					$hsseClientData['HsseClient']['wellsiterep']=$this->data['wellsiterep'];
-				if($this->HsseClient->save($hsseClientData)){
-				     echo $res;
-				 }else{
-				     echo 'fail';
-				 }
-				 
-     
-	          exit;
-	        }
-	 
-	 
-	 function add_report_view($id=null){
-		 $this->_checkAdminSession();
-		 $this->_getRoleMenuPermission();
-		 $this->grid_access();
-		 $this->hsse_client_tab();
-                 $this->layout="after_adminlogin_template";
-		 $reportdetail = $this->Report->find('all', array('conditions' => array('Report.id' =>base64_decode($id))));
-
-		 
-		 $this->Session->write('report_create',$reportdetail[0]['Report']['created_by']);
-		 
-		 
-	          $this->set('id',base64_decode($id));
-                	if($reportdetail[0]['Report']['event_date']!=''){
-				 $evndt=explode("-",$reportdetail[0]['Report']['event_date']);
-				 $event_date=$evndt[2]."/".$evndt[1]."/".$evndt[0];
-			}else{
-				 $event_date='';	
 			}
-		  
-                 $clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id)))); 
-		  if($reportdetail[0]['Report']['client']==10){
-		        $this->set('clienttabshow',0);
-			
+			$this->set('wellsiterep',$clientdetail[0]['HsseClient']['wellsiterep']);
+		}else{
+			$this->set('heading','Add Client Data');
+		    $this->set('button','Submit');
+			$this->set('id',0);
+			$this->set('well','');
+			$this->set('rig','');
+			$this->set('clientncr','');
+			$this->set('clientreviewed',1);
+			$this->set('report_id',base64_decode($id));
+			$this->set('clientreviewer','');
+			$this->set('wellsiterep','');
+			$this->set('clientreviewed_style','style="display:none"');
+			$this->set('client_feedback',0);
+		}
+	}
+	 
+	function hsseclientprocess()
+	{ 
+		$this->layout = "ajax";
+		$this->_checkAdminSession();
+		$hsseClientData=array();
+		$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>$this->data['report_id'])));
+		if(count($clientdetail)>0)
+		{
+			$res='update';
+			$hsseClientData['HsseClient']['id']=$clientdetail[0]['HsseClient']['id'];
+		}else{
+			$res='add';
+		}
+		$hsseClientData['HsseClient']['well']=$this->data['well']; 
+		$hsseClientData['HsseClient']['rig'] =$this->data['rig'];  
+		$hsseClientData['HsseClient']['clientncr']=$this->data['clientncr'];
+		$hsseClientData['HsseClient']['clientreviewed']=$this->data['clientreviewed'];
+		$hsseClientData['HsseClient']['report_id']=$this->data['report_id'];
+		$hsseClientData['HsseClient']['clientreviewer']=$this->data['clientreviewer'];
+		$hsseClientData['HsseClient']['wellsiterep']=$this->data['wellsiterep'];
+		if($this->HsseClient->save($hsseClientData)){
+			echo $res;
+		}else{
+			echo 'fail';
+		}
+		exit;
+	}
+	 
+	function add_report_view($id=null)
+	{
+		$this->_checkAdminSession();
+		$this->_getRoleMenuPermission();
+		$this->grid_access();
+		$this->hsse_client_tab();
+        $this->layout="after_adminlogin_template";
+		$reportdetail = $this->Report->find('all', array('conditions' => array('Report.id' =>base64_decode($id))));
+		$this->Session->write('report_create',$reportdetail[0]['Report']['created_by']);
+		$this->set('id',base64_decode($id));
+		if($reportdetail[0]['Report']['event_date']!=''){
+			$evndt=explode("-",$reportdetail[0]['Report']['event_date']);
+			$event_date=$evndt[2]."/".$evndt[1]."/".$evndt[0];
+		}else{
+			$event_date='';	
+		}
+		$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id)))); 
+		if($reportdetail[0]['Report']['client']==10){
+		    $this->set('clienttabshow',0);
 			$this->set('clienttab',0);
-				     
-		   }else if($reportdetail[0]['Report']['client']!=10){
-		        $this->set('clienttabshow',1);
+		}else if($reportdetail[0]['Report']['client']!=10){
+		    $this->set('clienttabshow',1);
 			if(count($clientdetail)>0){
 				$this->set('clienttab',1);
 			}else{
 				$this->set('clienttab',0);
 			}
-			
-	            }
-		  
-
-		    
-		  if(count($clientdetail)>0){
-			 if($clientdetail[0]['HsseClient']['clientreviewed']==3){
-			      $this->set('client_feedback',1);
-		           }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
-			      $this->set('client_feedback',0);
-			
-		          }
-			
-		  }else{
-			$this->set('client_feedback',0);
-		  }
-		  
-		  
-	  	  $this->set('event_date',$event_date);
-		  $this->set('since_event_hidden',$reportdetail[0]['Report']['since_event']);
-		  $this->set('since_event',$reportdetail[0]['Report']['since_event']);
-		  $this->set('reportno',$reportdetail[0]['Report']['report_no']);
-		  
-		  
-		  if($reportdetail[0]['Report']['closer_date']!='0000-00-00'){
-				 $clsdt=explode("-",$reportdetail[0]['Report']['closer_date']);
-				 $closedt=$clsdt[2]."/".$clsdt[1]."/".$clsdt[0];
-			}else{
-				 $closedt='00/00/0000';	
+		}
+		if(count($clientdetail)>0){
+			if($clientdetail[0]['HsseClient']['clientreviewed']==3){
+			    $this->set('client_feedback',1);
+		    }else if($clientdetail[0]['HsseClient']['clientreviewed']!=3){
+			    $this->set('client_feedback',0);
 			}
-		  
-		  $this->set('closer_date',$closedt);
-		  
-		  $incident_detail= $this->Incident->find('all', array('conditions' => array('Incident.id' =>$reportdetail[0]['Report']['incident_type'])));
-		  $this->set('incident_type',$incident_detail[0]['Incident']['type']);
-		  
-		  
-		  $user_detail= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['created_by'])));
-		  $this->set('created_by',$user_detail[0]['AdminMaster']['first_name']." ".$user_detail[0]['AdminMaster']['last_name']);
-		  
-		  $this->set('created_date','');
-		  
-		  $business_unit_detail= $this->BusinessType->find('all', array('conditions' => array('BusinessType.id' =>$reportdetail[0]['Report']['business_unit'])));
-		  $this->set('business_unit',$business_unit_detail[0]['BusinessType']['type']);
-		 
-
-		  
-		   $client_detail= $this->Client->find('all', array('conditions' => array('Client.id' =>$reportdetail[0]['Report']['client'])));
-		   $this->set('client',$client_detail[0]['Client']['name']);
-		  
-		  
-		   $fieldlocation= $this->Fieldlocation->find('all', array('conditions' => array('Fieldlocation.id' =>$reportdetail[0]['Report']['field_location'])));
-		   $this->set('fieldlocation',$fieldlocation[0]['Fieldlocation']['type']);
-		  
-		   $incidentLocation= $this->IncidentLocation->find('all', array('conditions' => array('IncidentLocation.id' =>$reportdetail[0]['Report']['field_location'])));
-		   $this->set('incidentLocation',$incidentLocation[0]['IncidentLocation']['type']);
-		  
-		  
-		   $countrty= $this->Country->find('all', array('conditions' => array('Country.id' =>$reportdetail[0]['Report']['country'])));
-		   $this->set('countrty',$countrty[0]['Country']['name']);
-		  
-		   $report_detail= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['reporter'],'AdminMaster.isdeleted'=>'N','AdminMaster.isblocked'=>'N')));
-		   $this->set('reporter',$report_detail[0]['AdminMaster']['first_name']." ".$report_detail[0]['AdminMaster']['last_name']);
-	   
-		   $incidentSeverity_detail= $this->IncidentSeverity->find('all', array('conditions' => array('IncidentSeverity.id' =>$reportdetail[0]['Report']['incident_severity'])));
-		   $this->set('incidentseveritydetail',$incidentSeverity_detail[0]['IncidentSeverity']['type']);
-		   $this->set('incidentseveritydetailcolor','style="background-color:'.$incidentSeverity_detail[0]['IncidentSeverity']['color_code'].'"');
-		   
-		   
-		   $residual_detail= $this->Residual->find('all', array('conditions' => array('Residual.id' =>$reportdetail[0]['Report']['residual'])));
-		   $this->set('residual',$residual_detail[0]['Residual']['type']);
-		   if($residual_detail[0]['Residual']['color_code']!=''){
-		    $this->set('residualcolor','style="background-color:'.$residual_detail[0]['Residual']['color_code'].'"');
-		   }else{
-		    $this->set('residualcolor','');	
-		   }
-	   
-		   if($reportdetail[0]['Report']['recorable']==1){
+		}else{
+			$this->set('client_feedback',0);
+		}
+		$this->set('event_date',$event_date);
+		$this->set('since_event_hidden',$reportdetail[0]['Report']['since_event']);
+		$this->set('since_event',$reportdetail[0]['Report']['since_event']);
+		$this->set('reportno',$reportdetail[0]['Report']['report_no']);
+		if($reportdetail[0]['Report']['closer_date']!='0000-00-00'){
+			$clsdt=explode("-",$reportdetail[0]['Report']['closer_date']);
+			$closedt=$clsdt[2]."/".$clsdt[1]."/".$clsdt[0];
+		}else{
+			$closedt='00/00/0000';	
+		}
+		$this->set('closer_date',$closedt);
+		$incident_detail= $this->Incident->find('all', array('conditions' => array('Incident.id' =>$reportdetail[0]['Report']['incident_type'])));
+		$this->set('incident_type',$incident_detail[0]['Incident']['type']);
+		$user_detail= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['created_by'])));
+		$this->set('created_by',$user_detail[0]['AdminMaster']['first_name']." ".$user_detail[0]['AdminMaster']['last_name']);
+		$this->set('created_date','');
+		$business_unit_detail= $this->BusinessType->find('all', array('conditions' => array('BusinessType.id' =>$reportdetail[0]['Report']['business_unit'])));
+		$this->set('business_unit',$business_unit_detail[0]['BusinessType']['type']);
+		$client_detail= $this->Client->find('all', array('conditions' => array('Client.id' =>$reportdetail[0]['Report']['client'])));
+		$this->set('client',$client_detail[0]['Client']['name']);
+		$fieldlocation= $this->Fieldlocation->find('all', array('conditions' => array('Fieldlocation.id' =>$reportdetail[0]['Report']['field_location'])));
+		$this->set('fieldlocation',$fieldlocation[0]['Fieldlocation']['type']);
+		$incidentLocation= $this->IncidentLocation->find('all', array('conditions' => array('IncidentLocation.id' =>$reportdetail[0]['Report']['field_location'])));
+		$this->set('incidentLocation',$incidentLocation[0]['IncidentLocation']['type']);
+		$countrty= $this->Country->find('all', array('conditions' => array('Country.id' =>$reportdetail[0]['Report']['country'])));
+		$this->set('countrty',$countrty[0]['Country']['name']);
+		$report_detail= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$reportdetail[0]['Report']['reporter'],'AdminMaster.isdeleted'=>'N','AdminMaster.isblocked'=>'N')));
+		$this->set('reporter',$report_detail[0]['AdminMaster']['first_name']." ".$report_detail[0]['AdminMaster']['last_name']);
+		$incidentSeverity_detail= $this->IncidentSeverity->find('all', array('conditions' => array('IncidentSeverity.id' =>$reportdetail[0]['Report']['incident_severity'])));
+		$this->set('incidentseveritydetail',$incidentSeverity_detail[0]['IncidentSeverity']['type']);
+		$this->set('incidentseveritydetailcolor','style="background-color:'.$incidentSeverity_detail[0]['IncidentSeverity']['color_code'].'"');
+		$residual_detail= $this->Residual->find('all', array('conditions' => array('Residual.id' =>$reportdetail[0]['Report']['residual'])));
+		$this->set('residual',$residual_detail[0]['Residual']['type']);
+		if($residual_detail[0]['Residual']['color_code']!=''){
+			$this->set('residualcolor','style="background-color:'.$residual_detail[0]['Residual']['color_code'].'"');
+		}else{
+			$this->set('residualcolor','');	
+		}
+	   	if($reportdetail[0]['Report']['recorable']==1){
 			$this->set('recorable','Yes');
 			$this->set('recorablecolor','style="background-color:#FF0000"');
-		   }elseif($reportdetail[0]['Report']['recorable']==2){
+		}elseif($reportdetail[0]['Report']['recorable']==2){
 			$this->set('recorable','No');
 			$this->set('recorablecolor','style="background-color:#40FF00"');
-		   }
-		   
-		     $potentilal_detail= $this->Potential->find('all', array('conditions' => array('Potential.id' =>$reportdetail[0]['Report']['potential'])));
-		   $this->set('potential',$potentilal_detail[0]['Potential']['type']);
-		   if($potentilal_detail[0]['Potential']['color_code']!=''){
-		    $this->set('potentialcolor','style="background-color:'.$potentilal_detail[0]['Potential']['color_code'].'"');
-		   }else{
-		    $this->set('potentialcolor','');	
-		   }
-	   
-		
-		   $this->set('summary',$reportdetail[0]['Report']['summary']);
-		  $this->set('details',$reportdetail[0]['Report']['details']);
-		  $this->set('created_by',$_SESSION['adminData']['AdminMaster']['first_name']." ".$_SESSION['adminData']['AdminMaster']['last_name']);
+		}
+		$potentilal_detail= $this->Potential->find('all', array('conditions' => array('Potential.id' =>$reportdetail[0]['Report']['potential'])));
+		$this->set('potential',$potentilal_detail[0]['Potential']['type']);
+		if($potentilal_detail[0]['Potential']['color_code']!=''){
+			$this->set('potentialcolor','style="background-color:'.$potentilal_detail[0]['Potential']['color_code'].'"');
+		}else{
+			$this->set('potentialcolor','');	
+		}
+	   	$this->set('summary',$reportdetail[0]['Report']['summary']);
+		$this->set('details',$reportdetail[0]['Report']['details']);
+		$this->set('created_by',$_SESSION['adminData']['AdminMaster']['first_name']." ".$_SESSION['adminData']['AdminMaster']['last_name']);
 		  
-		  /************************clientdata***************************/
-		  $clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
-		  
-		  
-		   if(count($clientdetail)>0){
-			
-			    $this->set('well',$clientdetail[0]['HsseClient']['well']);
-		            $this->set('rig',$clientdetail[0]['HsseClient']['rig']);
-		            $this->set('clientncr',$clientdetail[0]['HsseClient']['clientncr']);
-			    if($clientdetail[0]['HsseClient']['clientreviewed']==1){
+		/************************clientdata***************************/
+		$clientdetail = $this->HsseClient->find('all', array('conditions' => array('HsseClient.report_id' =>base64_decode($id))));
+		if(count($clientdetail)>0){
+			$this->set('well',$clientdetail[0]['HsseClient']['well']);
+			$this->set('rig',$clientdetail[0]['HsseClient']['rig']);
+			$this->set('clientncr',$clientdetail[0]['HsseClient']['clientncr']);
+			if($clientdetail[0]['HsseClient']['clientreviewed']==1){
 				$this->set('clientreviewed','N/A');
-			    }elseif($clientdetail[0]['HsseClient']['clientreviewed']==2){
+			}elseif($clientdetail[0]['HsseClient']['clientreviewed']==2){
 				$this->set('clientreviewed','N/A');
-			    }if($clientdetail[0]['HsseClient']['clientreviewed']==3){
+			}if($clientdetail[0]['HsseClient']['clientreviewed']==3){
 				$this->set('clientreviewed','Yes');
-				
-			    }
-		            
-  		            $this->set('report_id',$clientdetail[0]['HsseClient']['report_id']);
-		            $this->set('clientreviewer',$clientdetail[0]['HsseClient']['clientreviewer']);
-			    $this->set('wellsiterep',$clientdetail[0]['HsseClient']['wellsiterep']);
-			}else{
-			     $this->set('well','');
-			     $this->set('rig','');
-			     $this->set('clientncr','');
-			     $this->set('clientreviewed','');
-			     $this->set('clientreviewer','');
-			     $this->set('wellsiterep','');
-			
-			   	
-				
 			}
-			
-		  /************************indidentdata***************************/
-		  
-		  
-		  $incidentdetail = $this->HsseIncident->find('all', array('conditions' => array('HsseIncident.report_id' =>base64_decode($id),'HsseIncident.isdeleted'=>'N','HsseIncident.isblocked'=>'N')));
-		  
-		 //echo '<pre>';
-		 //print_r($incidentdetail);
-	         
-		  $incidentdetailHolder=array();
-	           if(count($incidentdetail)>0){
+			$this->set('report_id',$clientdetail[0]['HsseClient']['report_id']);
+			$this->set('clientreviewer',$clientdetail[0]['HsseClient']['clientreviewer']);
+			$this->set('wellsiterep',$clientdetail[0]['HsseClient']['wellsiterep']);
+		}else{
+			$this->set('well','');
+			$this->set('rig','');
+			$this->set('clientncr','');
+			$this->set('clientreviewed','');
+			$this->set('clientreviewer','');
+			$this->set('wellsiterep','');
+		}
+		/************************indidentdata***************************/
+		$incidentdetail = $this->HsseIncident->find('all', array('conditions' => array('HsseIncident.report_id' =>base64_decode($id),'HsseIncident.isdeleted'=>'N','HsseIncident.isblocked'=>'N')));
+		//echo '<pre>';
+		//print_r($incidentdetail);
+	    $incidentdetailHolder=array();
+	    if(count($incidentdetail)>0){
 			for($i=0;$i<count($incidentdetail);$i++){
-	       
-	                     if($incidentdetail[$i]['HsseIncident']['date_incident']!=''){
+	       		if($incidentdetail[$i]['HsseIncident']['date_incident']!=''){
 				    $incidt=explode("-",$incidentdetail[$i]['HsseIncident']['date_incident']);
 				    $incidentdetailHolder[$i]['date_incident']=$incidt[2]."/".$incidt[1]."/".$incidt[0];
-			         }else{
+			    }else{
 				    $incidentdetailHolder[$i]['date_incident']='';	
-			        }
-				
+			    }
 				if($incidentdetail[$i]['HsseIncident']['incident_time']!=''){
-				
-				$incidentdetailHolder[$i]['incident_time']=$incidentdetail[$i]['HsseIncident']['incident_time'];
+					$incidentdetailHolder[$i]['incident_time']=$incidentdetail[$i]['HsseIncident']['incident_time'];
 				}else{
-				$incidentdetailHolder[$i]['incident_time']='';	
+					$incidentdetailHolder[$i]['incident_time']='';	
 				}
-						
 				if($incidentdetail[$i]['HsseIncident']['incident_severity']!=0){
-				$incidentSeverity_type= $this->IncidentSeverity->find('all', array('conditions' => array('IncidentSeverity.id' =>$incidentdetail[$i]['HsseIncident']['incident_severity'])));
-				$incidentdetailHolder[$i]['incident_severity']=$incidentSeverity_type[0]['IncidentSeverity']['type'];
+					$incidentSeverity_type= $this->IncidentSeverity->find('all', array('conditions' => array('IncidentSeverity.id' =>$incidentdetail[$i]['HsseIncident']['incident_severity'])));
+					$incidentdetailHolder[$i]['incident_severity']=$incidentSeverity_type[0]['IncidentSeverity']['type'];
 				}else{
-				$incidentdetailHolder[$i]['incident_severity']='';	
+					$incidentdetailHolder[$i]['incident_severity']='';	
 				}
-				
 				if($incidentdetail[$i]['HsseIncident']['incident_loss']!=0){
-		                $incidentLoss_type= $this->Loss->find('all', array('conditions' => array('Loss.id' =>$incidentdetail[$i]['HsseIncident']['incident_loss'])));
-				$incidentdetailHolder[$i]['incident_loss']=$incidentLoss_type[0]['Loss']['type'];
+		            $incidentLoss_type= $this->Loss->find('all', array('conditions' => array('Loss.id' =>$incidentdetail[$i]['HsseIncident']['incident_loss'])));
+					$incidentdetailHolder[$i]['incident_loss']=$incidentLoss_type[0]['Loss']['type'];
 				}else{
-				$incidentdetailHolder[$i]['incident_loss']='';	
+					$incidentdetailHolder[$i]['incident_loss']='';	
 				}
 				
 				if($incidentdetail[$i]['HsseIncident']['incident_category']!=0){
-				 $incident_category_type= $this->IncidentCategory->find('all', array('conditions' => array('IncidentCategory.id' =>$incidentdetail[$i]['HsseIncident']['incident_category'])));
-				 $incidentdetailHolder[$i]['incident_category']=$incident_category_type[0]['IncidentCategory']['type'];
+					$incident_category_type= $this->IncidentCategory->find('all', array('conditions' => array('IncidentCategory.id' =>$incidentdetail[$i]['HsseIncident']['incident_category'])));
+					$incidentdetailHolder[$i]['incident_category']=$incident_category_type[0]['IncidentCategory']['type'];
 				}else{
-				  $incidentdetailHolder[$i]['incident_category']='';	
+					$incidentdetailHolder[$i]['incident_category']='';	
 				}
-			        
-		               if($incidentdetail[$i]['HsseIncident']['incident_sub_category']!=0){
+			    if($incidentdetail[$i]['HsseIncident']['incident_sub_category']!=0){
 			           $incident_sub_category_type= $this->IncidentSubCategory->find('all', array('conditions' => array('IncidentSubCategory.id' =>$incidentdetail[$i]['HsseIncident']['incident_sub_category'])));
-				   $incidentdetailHolder[$i]['incident_sub_category']=$incident_sub_category_type[0]['IncidentSubCategory']['type'];
-			       }else{
-				  $incidentdetailHolder[$i]['incident_sub_category']='';
-			       }
-			      	       
-			       if($incidentdetail[$i]['HsseIncident']['incident_summary']!=''){
+				   		$incidentdetailHolder[$i]['incident_sub_category']=$incident_sub_category_type[0]['IncidentSubCategory']['type'];
+			    }else{
+				  	$incidentdetailHolder[$i]['incident_sub_category']='';
+			    }
+			    if($incidentdetail[$i]['HsseIncident']['incident_summary']!=''){
 			       $incidentdetailHolder[$i]['incident_summary']=$incidentdetail[$i]['HsseIncident']['incident_summary'];
-			       }else{
-				 $incidentdetailHolder[$i]['incident_summary']='';
-			       }
-			       if($incidentdetail[$i]['HsseIncident']['detail']!=''){
+			    }else{
+					$incidentdetailHolder[$i]['incident_summary']='';
+			    }
+			    if($incidentdetail[$i]['HsseIncident']['detail']!=''){
 			       $incidentdetailHolder[$i]['detail']=$incidentdetail[$i]['HsseIncident']['detail'];
-			       }else{
-				$incidentdetailHolder[$i]['detail']='';
-			       }
-			       
-			       $incidentdetailHolder[$i]['id']=$incidentdetail[$i]['HsseIncident']['id'];
-		        
-			
-			      $incidentdetailHolder[$i]['isblocked']=$incidentdetail[$i]['HsseIncident']['isblocked'];
-			      $incidentdetailHolder[$i]['isdeleted']=$incidentdetail[$i]['HsseIncident']['isdeleted'];
-			      $incidentdetailHolder[$i]['incident_no']=$incidentdetail[$i]['HsseIncident']['incident_no'];  
-			if(count($incidentdetail[$i]['HsseInvestigationData'])>0){
-				
-				for($v=0;$v<count($incidentdetail[$i]['HsseInvestigationData']);$v++){
-					 $immidiate_cause=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['immediate_cause']);
-					  if($immidiate_cause[0]!=0 || $immidiate_cause[0]!=''){
-			                         $imdCause = $this->ImmediateCause->find('all', array('conditions' => array('ImmediateCause.id'=>$immidiate_cause[0])));
-						 if(count($imdCause)>0){
-						 $incidentdetailHolder[$i]['imd_cause'][]=$imdCause[0]['ImmediateCause']['type'];
-						 }          
-					   if($immidiate_cause[1]!=0 || $immidiate_cause[1]!=''){
-
-			                          $imdSubCause = $this->ImmediateSubCause->find('all', array('conditions' => array('ImmediateSubCause.id'=>$immidiate_cause[1])));
-						  if(count($imdSubCause)>0){
-					              $incidentdetailHolder[$i]['imd_sub_cause'][]=$imdSubCause[0]['ImmediateSubCause']['type'];
-						  }
-                                           }
-					  }
-					   if($incidentdetail[$i]['HsseInvestigationData'][$v]['comments']!=''){
-				                $incidentdetailHolder[$i]['comment']=$incidentdetail[$i]['HsseInvestigationData'][$v]['comments'];
-			                    }
+			    }else{
+					$incidentdetailHolder[$i]['detail']='';
+			    }
+			    $incidentdetailHolder[$i]['id']=$incidentdetail[$i]['HsseIncident']['id'];
+				$incidentdetailHolder[$i]['isblocked']=$incidentdetail[$i]['HsseIncident']['isblocked'];
+				$incidentdetailHolder[$i]['isdeleted']=$incidentdetail[$i]['HsseIncident']['isdeleted'];
+				$incidentdetailHolder[$i]['incident_no']=$incidentdetail[$i]['HsseIncident']['incident_no'];  
+				if(count($incidentdetail[$i]['HsseInvestigationData'])>0){
+					for($v=0;$v<count($incidentdetail[$i]['HsseInvestigationData']);$v++){
+						$immidiate_cause=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['immediate_cause']);
+					  	if($immidiate_cause[0]!=0 || $immidiate_cause[0]!=''){
+			                $imdCause = $this->ImmediateCause->find('all', array('conditions' => array('ImmediateCause.id'=>$immidiate_cause[0])));
+							if(count($imdCause)>0){
+								$incidentdetailHolder[$i]['imd_cause'][]=$imdCause[0]['ImmediateCause']['type'];
+							}          
+					   		if($immidiate_cause[1]!=0 || $immidiate_cause[1]!=''){
+								$imdSubCause = $this->ImmediateSubCause->find('all', array('conditions' => array('ImmediateSubCause.id'=>$immidiate_cause[1])));
+						  		if(count($imdSubCause)>0){
+					            	$incidentdetailHolder[$i]['imd_sub_cause'][]=$imdSubCause[0]['ImmediateSubCause']['type'];
+						  		}
+                            }
+					  	}
+					   	if($incidentdetail[$i]['HsseInvestigationData'][$v]['comments']!=''){
+				            $incidentdetailHolder[$i]['comment']=$incidentdetail[$i]['HsseInvestigationData'][$v]['comments'];
+			            }
 					    $incidentdetailHolder[$i]['investigation_block']=$incidentdetail[$i]['HsseInvestigationData'][$v]['isblocked'];
 					    $incidentdetailHolder[$i]['investigation_delete']=$incidentdetail[$i]['HsseInvestigationData'][$v]['isdeleted'];
 					    $incidentdetailHolder[$i]['investigation_no'][]=$incidentdetail[$i]['HsseInvestigationData'][$v]['investigation_no'];
 					    $incidentdetailHolder[$i]['incident_no_investigation']=$incidentdetail[$i]['HsseInvestigationData'][$v]['incident_no'];
-					   if($incidentdetail[$i]['HsseInvestigationData'][$v]['root_cause_id']!=0){
-				                $explode_rootcause=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['root_cause_id']);
-				 
-							for($j=0;$j<count($explode_rootcause);$j++){
+					   	if($incidentdetail[$i]['HsseInvestigationData'][$v]['root_cause_id']!=0){
+				            $explode_rootcause=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['root_cause_id']);
+				 			for($j=0;$j<count($explode_rootcause);$j++){
 								if($explode_rootcause[$j]!=0){
-								 $rootCauseDetail = $this->RootCause->find('all', array('conditions' => array('RootCause.id' =>$explode_rootcause[$j])));
-								 $incidentdetailHolder[$i]['root_cause_val'][$v][$j]=$rootCauseDetail[0]['RootCause']['type'];
+									$rootCauseDetail = $this->RootCause->find('all', array('conditions' => array('RootCause.id' =>$explode_rootcause[$j])));
+									$incidentdetailHolder[$i]['root_cause_val'][$v][$j]=$rootCauseDetail[0]['RootCause']['type'];
 								}
-								
-								
 							}
-				 
-			                      }
-					   if($incidentdetail[$i]['HsseInvestigationData'][$v]['remedila_action_id']!=''){
-				                 $explode_remedila_action_id=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['remedila_action_id']);
-				    		 for($k=0;$k<count($explode_remedila_action_id);$k++){
-							if(isset($explode_remedila_action_id[$k])){
-							 $remDetail = $this->HsseRemidial->find('all', array('conditions' => array('HsseRemidial.id' =>$explode_remedila_action_id[$k],'HsseRemidial.isdeleted'=>'N','HsseRemidial.isblocked'=>'N')));
-							 $incidentdetailHolder[$i]['rem_val'][$v][$k]=$remDetail[0]['HsseRemidial']['remidial_summery'];
-							 $incidentdetailHolder[$i]['rem_val_id'][$v][$k]=$remDetail[0]['HsseRemidial']['id'];
+				 		}
+					   	if($incidentdetail[$i]['HsseInvestigationData'][$v]['remedila_action_id']!=''){
+				            $explode_remedila_action_id=explode(",",$incidentdetail[$i]['HsseInvestigationData'][$v]['remedila_action_id']);
+				    		for($k=0;$k<count($explode_remedila_action_id);$k++){
+								if(isset($explode_remedila_action_id[$k])){
+									$remDetail = $this->HsseRemidial->find('all', array('conditions' => array('HsseRemidial.id' =>$explode_remedila_action_id[$k],'HsseRemidial.isdeleted'=>'N','HsseRemidial.isblocked'=>'N')));
+									$incidentdetailHolder[$i]['rem_val'][$v][$k]=$remDetail[0]['HsseRemidial']['remidial_summery'];
+									$incidentdetailHolder[$i]['rem_val_id'][$v][$k]=$remDetail[0]['HsseRemidial']['id'];
+								}
 							}
-							
 						}
-				
-			                   }
-					   
-				  $incidentdetailHolder[$i]['view'][]='yes';       
-				}
-	
-		            
-		        }else{
-			     $incidentdetailHolder[$i]['view'][]='no';
+						$incidentdetailHolder[$i]['view'][]='yes';       
+					}
+				}else{
+			    	$incidentdetailHolder[$i]['view'][]='no';
 		        }
-		     
-			
-		     }
-			
-			
-		  }
-		  
-		  
-		  //print_r($incidentdetailHolder);   
-		     
-         	  $this->set('incidentdetailHolder',$incidentdetailHolder);
-		  
-	  
-		  
-		  
-		  /*************Incident - Personnel****************************/
-		  $personeldetail = $this->HssePersonnel->find('all', array('conditions' => array('HssePersonnel.report_id' =>base64_decode($id),'HssePersonnel.isdeleted'=>'N','HssePersonnel.isblocked'=>'N')));
-		  if(count($personeldetail)>0){
+		    }
+		}
+		//print_r($incidentdetailHolder);   
+		$this->set('incidentdetailHolder',$incidentdetailHolder);
+		/*************Incident - Personnel****************************/
+		$personeldetail = $this->HssePersonnel->find('all', array('conditions' => array('HssePersonnel.report_id' =>base64_decode($id),'HssePersonnel.isdeleted'=>'N','HssePersonnel.isblocked'=>'N')));
+		if(count($personeldetail)>0){
 			$this->set('personeldata',1);
 			for($i=0;$i<count($personeldetail);$i++){
 				$user_detail= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$personeldetail[$i]['HssePersonnel']['personal_data'],'AdminMaster.isblocked'=>'N','AdminMaster.isdeleted'=>'N')));
@@ -1059,91 +1495,79 @@ class ReportsController extends AppController
 					$personeldetail[$i]['HssePersonnel']['name']=$user_detail[0]['AdminMaster']['first_name']."  ".$user_detail[0]['AdminMaster']['last_name'];
 					$personeldetail[$i]['HssePersonnel']['position']=$user_detail[0]['RoleMaster']['role_name'];
 				}
-				
 			}
-			 $this->set('personeldetail',$personeldetail);
-		  }else{
+			$this->set('personeldetail',$personeldetail);
+		}else{
 			$this->set('personeldata',0);
-		  }
-		 /*************Attachments****************************/
-		  $attachmentData = $this->HsseAttachment->find('all', array('conditions' => array('HsseAttachment.report_id' =>base64_decode($id),'HsseAttachment.isdeleted'=>'N','HsseAttachment.isblocked'=>'N')));
-		  if(count($attachmentData)>0){
-		      $this->set('attachmentData',$attachmentData);
-		      $this->set('attachmentTab',1);
-		  }else{
-		       $this->set('attachmentData','');
-		       $this->set('attachmentTab',0);
-		  }
-		  /***********REMIDIAL ACTION****************************/
-		  $remidialdetail = $this->HsseRemidial->find('all', array('conditions' => array('HsseRemidial.report_no' =>base64_decode($id),'HsseRemidial.isblocked'=>'N','HsseRemidial.isdeleted'=>'N')));
-		  if(count($remidialdetail)>0){
+		}
+		/*************Attachments****************************/
+		$attachmentData = $this->HsseAttachment->find('all', array('conditions' => array('HsseAttachment.report_id' =>base64_decode($id),'HsseAttachment.isdeleted'=>'N','HsseAttachment.isblocked'=>'N')));
+		if(count($attachmentData)>0){
+			$this->set('attachmentData',$attachmentData);
+			$this->set('attachmentTab',1);
+		}else{
+			$this->set('attachmentData','');
+			$this->set('attachmentTab',0);
+		}
+		/***********REMIDIAL ACTION****************************/
+		$remidialdetail = $this->HsseRemidial->find('all', array('conditions' => array('HsseRemidial.report_no' =>base64_decode($id),'HsseRemidial.isblocked'=>'N','HsseRemidial.isdeleted'=>'N')));
+		if(count($remidialdetail)>0){
 			$this->set('remidial',1);
 			for($i=0;$i<count($remidialdetail);$i++){
-				 $user_detail_createby= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_createby'])));
-				 $remidialdetail[$i]['HsseRemidial']['remidial_createby']=$user_detail_createby[0]['AdminMaster']['first_name']."  ".$user_detail_createby[0]['AdminMaster']['last_name'];
-				 $user_detail_reponsibilty= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_responsibility'])));
-				 $remidialdetail[$i]['HsseRemidial']['remidial_responsibility']=$user_detail_reponsibilty[0]['AdminMaster']['first_name']."  ".$user_detail_reponsibilty[0]['AdminMaster']['last_name'];
-				 $priority_detail= $this->Priority->find('all', array('conditions' => array('Priority.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_priority'])));
-				 $remidialdetail[$i]['HsseRemidial']['priority']=$priority_detail[0]['Priority']['type'];
-				 $remidialdetail[$i]['HsseRemidial']['priority_color']='style="background-color:'.$priority_detail[0]['Priority']['colorcoder'].'"';
-				 $lastupdated=explode(" ",$remidialdetail[$i]['HsseRemidial']['modified']);
-				 $lastupdatedate=explode("-",$lastupdated[0]);
-				 $remidialdetail[$i]['HsseRemidial']['lastupdate']=$lastupdatedate[1].'/'.$lastupdatedate[2].'/'.$lastupdatedate[0];
-				 $createdate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_create']);
-				 $remidialdetail[$i]['HsseRemidial']['createRemidial']=date("d-M-y", mktime(0, 0, 0, $createdate[1], $createdate[2], $createdate[0]));
-				 
-				 if($remidialdetail[$i]['HsseRemidial']['remidial_closure_date']=='0000-00-00'){
-				   	  $closerDate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_closure_date']);
-				          $remidialdetail[$i]['HsseRemidial']['closeDate']='';
-					  $remidialdetail[$i]['HsseRemidial']['remidial_closer_summary']='';
-					
-				 }elseif($remidialdetail[$i]['HsseRemidial']['remidial_closure_date']!='0000-00-00'){
-					 $closerDate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_closure_date']);
-				         $remidialdetail[$i]['HsseRemidial']['closeDate']=date("d-M-y", mktime(0, 0, 0, $closerDate[1], $closerDate[2], $closerDate[0]));
-					
-				 }
+				$user_detail_createby= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_createby'])));
+				$remidialdetail[$i]['HsseRemidial']['remidial_createby']=$user_detail_createby[0]['AdminMaster']['first_name']."  ".$user_detail_createby[0]['AdminMaster']['last_name'];
+				$user_detail_reponsibilty= $this->AdminMaster->find('all', array('conditions' => array('AdminMaster.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_responsibility'])));
+				$remidialdetail[$i]['HsseRemidial']['remidial_responsibility']=$user_detail_reponsibilty[0]['AdminMaster']['first_name']."  ".$user_detail_reponsibilty[0]['AdminMaster']['last_name'];
+				$priority_detail= $this->Priority->find('all', array('conditions' => array('Priority.id' =>$remidialdetail[$i]['HsseRemidial']['remidial_priority'])));
+				$remidialdetail[$i]['HsseRemidial']['priority']=$priority_detail[0]['Priority']['type'];
+				$remidialdetail[$i]['HsseRemidial']['priority_color']='style="background-color:'.$priority_detail[0]['Priority']['colorcoder'].'"';
+				$lastupdated=explode(" ",$remidialdetail[$i]['HsseRemidial']['modified']);
+				$lastupdatedate=explode("-",$lastupdated[0]);
+				$remidialdetail[$i]['HsseRemidial']['lastupdate']=$lastupdatedate[1].'/'.$lastupdatedate[2].'/'.$lastupdatedate[0];
+				$createdate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_create']);
+				$remidialdetail[$i]['HsseRemidial']['createRemidial']=date("d-M-y", mktime(0, 0, 0, $createdate[1], $createdate[2], $createdate[0]));
+				if($remidialdetail[$i]['HsseRemidial']['remidial_closure_date']=='0000-00-00'){
+					$closerDate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_closure_date']);
+						$remidialdetail[$i]['HsseRemidial']['closeDate']='';
+					$remidialdetail[$i]['HsseRemidial']['remidial_closer_summary']='';
 				
-				 
+				}elseif($remidialdetail[$i]['HsseRemidial']['remidial_closure_date']!='0000-00-00'){
+					$closerDate=explode("-",$remidialdetail[$i]['HsseRemidial']['remidial_closure_date']);
+						$remidialdetail[$i]['HsseRemidial']['closeDate']=date("d-M-y", mktime(0, 0, 0, $closerDate[1], $closerDate[2], $closerDate[0]));
+				
+				}
 			}
-			
-			  
-			
-			 $this->set('remidialdetail',$remidialdetail);
-		  }else{
-			 $this->set('remidialdetail',array());
+			$this->set('remidialdetail',$remidialdetail);
+		}else{
+			$this->set('remidialdetail',array());
 			$this->set('remidial',0);
-		  }
-		  
-		  /****************Investigation Team******************/
-		   $invetigationDetail = $this->HsseInvestigation->find('all', array('conditions' => array('HsseInvestigation.report_id' =>base64_decode($id))));
-		   if(count($invetigationDetail)){
+		}
+		/****************Investigation Team******************/
+		$invetigationDetail = $this->HsseInvestigation->find('all', array('conditions' => array('HsseInvestigation.report_id' =>base64_decode($id))));
+		if(count($invetigationDetail)){
 			$condition = "AdminMaster.isblocked = 'N' AND AdminMaster.isdeleted = 'N' AND AdminMaster.id IN (".$invetigationDetail[0]['HsseInvestigation']['team_user_id'].")";
 			$investigation_team = $this->AdminMaster->find('all', array('conditions' =>  $condition));
 			$this->set('invetigationDetail',$invetigationDetail);
 			$this->set('investigation_team',$investigation_team);
-		   }else{
-		       $this->set('investigation_team',array());	
-		   }
-		   
-		    /****************Incident Investigation******************/
-		     $incidentInvestigationDetail = $this->HsseInvestigationData->find('all', array('conditions' => array('HsseInvestigationData.report_id' =>base64_decode($id),'HsseInvestigationData.isdeleted'=>'N','HsseInvestigationData.isblocked'=>'N'),'recursive'=>2));
-			     
-	             if(count($incidentInvestigationDetail)>0){
-		     for($i=0;$i<count($incidentInvestigationDetail);$i++){
-			
-			 $incidentDetail = $this->HsseIncident->find('all', array('conditions' => array('HsseIncident.id' =>$incidentInvestigationDetail[$i]['HsseInvestigationData']['incident_id'])));
-			 $incidentInvestigationDetail[$i]['HsseInvestigationData']['incident_summary']=$incidentDetail[0]['HsseIncident']['incident_summary'];
-			 $lossDetail = $this->Loss->find('all', array('conditions' => array('id' =>$incidentDetail[0]['HsseIncident']['incident_loss'])));
-			 $incidentInvestigationDetail[$i]['HsseInvestigationData']['loss']=$lossDetail[0]['Loss']['type'];
-		         $immidiate_cause=explode(",",$incidentInvestigationDetail[$i]['HsseInvestigationData']['immediate_cause']);
-			 
-		         if($immidiate_cause[0]!=''){
-			   $incidentInvestigationDetail[$i]['HsseInvestigationData']['imd_cause'] = $this->ImmediateCause->find('all', array('conditions' => array('ImmediateCause.id'=>$immidiate_cause[0])));
+		}else{
+			$this->set('investigation_team',array());	
+		}
+		/****************Incident Investigation******************/
+		$incidentInvestigationDetail = $this->HsseInvestigationData->find('all', array('conditions' => array('HsseInvestigationData.report_id' =>base64_decode($id),'HsseInvestigationData.isdeleted'=>'N','HsseInvestigationData.isblocked'=>'N'),'recursive'=>2));
+		if(count($incidentInvestigationDetail)>0){
+		    for($i=0;$i<count($incidentInvestigationDetail);$i++){
+				$incidentDetail = $this->HsseIncident->find('all', array('conditions' => array('HsseIncident.id' =>$incidentInvestigationDetail[$i]['HsseInvestigationData']['incident_id'])));
+				$incidentInvestigationDetail[$i]['HsseInvestigationData']['incident_summary']=$incidentDetail[0]['HsseIncident']['incident_summary'];
+				$lossDetail = $this->Loss->find('all', array('conditions' => array('id' =>$incidentDetail[0]['HsseIncident']['incident_loss'])));
+				$incidentInvestigationDetail[$i]['HsseInvestigationData']['loss']=$lossDetail[0]['Loss']['type'];
+		        $immidiate_cause=explode(",",$incidentInvestigationDetail[$i]['HsseInvestigationData']['immediate_cause']);
+			 	if($immidiate_cause[0]!=''){
+			   		$incidentInvestigationDetail[$i]['HsseInvestigationData']['imd_cause'] = $this->ImmediateCause->find('all', array('conditions' => array('ImmediateCause.id'=>$immidiate_cause[0])));
 			    }
 			  
 		        if(isset($immidiate_cause[1])){
 
-			   $incidentInvestigationDetail[$i]['HsseInvestigationData']['imd_sub_cause'] = $this->ImmediateSubCause->find('all', array('conditions' => array('ImmediateSubCause.id'=>$immidiate_cause[1])));
+			   	$incidentInvestigationDetail[$i]['HsseInvestigationData']['imd_sub_cause'] = $this->ImmediateSubCause->find('all', array('conditions' => array('ImmediateSubCause.id'=>$immidiate_cause[1])));
 					
                           }
 			  
@@ -2129,12 +2553,6 @@ class ReportsController extends AppController
 		
 	      }
 	
-	
-	
-	
-	
-	
-	
 	public function get_all_attachment_list($report_id)
 	{
 		Configure::write('debug', '2'); 
@@ -2478,18 +2896,18 @@ class ReportsController extends AppController
 		}
 		
 		function remidial_email_view($id,$remedial_no,$report_id){
-			 $this->_checkAdminSession();
-		         $this->_getRoleMenuPermission();
-                         $this->grid_access();
-			 $this->layout="ajax";
-			 $remidialData= $this->HsseRemidial->find('all',array('conditions'=>array('HsseRemidial.report_no'=>$report_id,'HsseRemidial.remedial_no'=>$remedial_no)));
-			 $reportData= $this->Report->find('all',array('conditions'=>array('Report.id'=>$remidialData[0]['HsseRemidial']['report_no'])));
-			 $userData= $this->AdminMaster->find('all',array('conditions'=>array('AdminMaster.id'=>$remidialData[0]['HsseRemidial']['remidial_responsibility'])));
-			 $this->set('fullname',$userData[0]['AdminMaster']['first_name']." ".$userData[0]['AdminMaster']['last_name']);
-			 $this->set('report_no',$reportData[0]['Report']['report_no']);
-			 $this->set('remidialData',$remidialData);
-		
+			$this->_checkAdminSession();
+			$this->_getRoleMenuPermission();
+			$this->grid_access();
+			$this->layout="ajax";
+			$remidialData= $this->HsseRemidial->find('all',array('conditions'=>array('HsseRemidial.report_no'=>$report_id,'HsseRemidial.remedial_no'=>$remedial_no)));
+			$reportData= $this->Report->find('all',array('conditions'=>array('Report.id'=>$remidialData[0]['HsseRemidial']['report_no'])));
+			$userData= $this->AdminMaster->find('all',array('conditions'=>array('AdminMaster.id'=>$remidialData[0]['HsseRemidial']['remidial_responsibility'])));
+			$this->set('fullname',$userData[0]['AdminMaster']['first_name']." ".$userData[0]['AdminMaster']['last_name']);
+			$this->set('report_no',$reportData[0]['Report']['report_no']);
+			$this->set('remidialData',$remidialData);
 		}
+
 		function report_hsse_remidial_list($id=null){
 			//$month = 'Feb';
                         //echo date('m', strtotime($month));
@@ -2536,7 +2954,6 @@ class ReportsController extends AppController
 			unset($_SESSION['value']);
 		
 		}
-	
 	
 		public function get_all_remidial_list($report_id)
 		{
@@ -2588,13 +3005,7 @@ class ReportsController extends AppController
 				        break;	
 					
 				}
-				
-				
-				
 			}
-			
-			
-			
 			$limit=null;
 			if($_REQUEST['limit'] == 'all'){
 						
@@ -3140,30 +3551,31 @@ class ReportsController extends AppController
 			$this->layout="ajax";
 			$lowedate_array=explode("-",$this->data['lowre_date']);
 			$currentdate_array=explode("-",$this->data['current_date']);
-	                $date1 =  mktime(0, 0, 0, $lowedate_array[0],$lowedate_array[1],$lowedate_array[2]);
+	        $date1 =  mktime(0, 0, 0, $lowedate_array[0],$lowedate_array[1],$lowedate_array[2]);
 			$date2 =  mktime(0, 0, 0, $currentdate_array[0],$currentdate_array[1],$currentdate_array[2]);
-                        $interval =($date2 - $date1)/(3600*24);
+            $interval =($date2 - $date1)/(3600*24);
 			echo $interval;
 			exit;
 			
 		}
-	      function main_close(){
-		       $this->layout="ajax";
-		       $reportData=array();
-		       $reportData['Report']['id']=$this->data['report_id'];
-		       if($this->data['type']=='close'){
-		           $reportData['Report']['closer_date']=date("Y-m-d");
-			   
-		       }elseif($this->data['type']=='reopen'){
-			   $reportData['Report']['closer_date']='0000-00-00';
+	    
+		function main_close(){
+			$this->layout="ajax";
+			$reportData=array();
+			$reportData['Report']['id']=$this->data['report_id'];
+			if($this->data['type']=='close'){
+				$reportData['Report']['closer_date']=date("Y-m-d");
 			
-		       }
-		       if($this->Report->save($reportData)){
-			  echo $this->data['type'].'~'.date("d/m/Y");
-		       }
-		       exit;
+			}elseif($this->data['type']=='reopen'){
+			$reportData['Report']['closer_date']='0000-00-00';
 		
-	      }
+			}
+			if($this->Report->save($reportData)){
+			echo $this->data['type'].'~'.date("d/m/Y");
+			}
+			exit;
+	
+		}
 		
 	     	function report_hsse_investigation_data_list($report_id){
 		          $this->_checkAdminSession();
@@ -3590,7 +4002,7 @@ class ReportsController extends AppController
 				 $this->set('heading','Add Investigation Data Analysis');
 			         $this->set('comments','');
 			         $this->set('button','Submit');
-				 $this->set('edit_investigation_id',0);
+				 $this->set('',0);
 				 $this->set('disabled','');
 				 $this->set('edit_incident_id',0);
 				 $this->set('remidialList',array());

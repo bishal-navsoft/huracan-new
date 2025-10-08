@@ -1,4 +1,7 @@
 <?php
+namespace App\Model\Table;
+
+use Cake\ORM\Table;
 class Category extends AppModel {
     var $name = 'Category';
    /* var $belongsTo = array(

@@ -1,4 +1,7 @@
-<?PHP
+<?php
+namespace App\Model\Table;
+
+use Cake\ORM\Table;
 class AuditRemidial extends AppModel
 {
 	public $name = 'AuditRemidial';

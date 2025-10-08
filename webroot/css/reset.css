@@ -102,145 +102,145 @@ table {
 
 /***********************grid css**********/
 .menuitems {
-           background-image:url(../img/gridimages/mainmenu.png) !important;
+           background-image:url(/img/gridimages/mainmenu.png) !important;
         }
 				.up {
-            background-image:url(../img/gridimages/uparrow.png) !important;
+            background-image:url(/img/gridimages/uparrow.png) !important;
         }
 				.down {
-            background-image:url(../img/gridimages/downarrow.png) !important;
+            background-image:url(/img/gridimages/downarrow.png) !important;
         }
 
    .unblock {
-            background-image:url(../img/gridimages/unblock.png) !important;
+            background-image:url(/img/gridimages/unblock.png) !important;
         }
         .unblock:hover {
-            background-image:url(../img/gridimages/unblock_hover.png) !important;
+            background-image:url(/img/gridimages/unblock_hover.png) !important;
         }
 
         .block {
-            background-image:url(../img/gridimages/block.png) !important;
+            background-image:url(/img/gridimages/block.png) !important;
         }
         .block:hover {
-            background-image:url(../img/gridimages/block_hover.png) !important;
+            background-image:url(/img/gridimages/block_hover.png) !important;
         }
 
 	.change_password {
-            background-image:url(../img/gridimages/change_password.png) !important;
+            background-image:url(/img/gridimages/change_password.png) !important;
         }
 	.change_password:hover {
-            background-image:url(../img/gridimages/change_password_hover.png) !important;
+            background-image:url(/img/gridimages/change_password_hover.png) !important;
         }
 
 	.view {
-            background-image:url(../img/gridimages/magnify.png) !important;
+            background-image:url(/img/gridimages/magnify.png) !important;
         }
 	.surveyresult {
-            background-image:url(../img/gridimages/result.png) !important;
+            background-image:url(/img/gridimages/result.png) !important;
         }
 
 	.edit {
-            background-image:url(../img/gridimages/edit.png) !important;
+            background-image:url(/img/gridimages/edit.png) !important;
         }
 	.dataentry {
-            background-image:url(../img/gridimages/data_entry.png) !important;
+            background-image:url(/img/gridimages/data_entry.png) !important;
         }
 	.rejection {
-            background-image:url(../img/gridimages/rejection.png) !important;
+            background-image:url(/img/gridimages/rejection.png) !important;
         }
 	
 	
 		.edit:hover {
-            background-image:url(../img/gridimages/edit_hover.png) !important;
+            background-image:url(/img/gridimages/edit_hover.png) !important;
         }
 
 		.commision {
-            background-image:url(../img/gridimages/commision.png) !important; 			
+            background-image:url(/img/gridimages/commision.png) !important; 			
         }
 		.commision:hover {
-            background-image:url(../img/gridimages/commision_hover.png) !important; 			
+            background-image:url(/img/gridimages/commision_hover.png) !important; 			
         }
 
 				.share {
-            background-image:url(../img/gridimages/share.png) !important;
+            background-image:url(/img/gridimages/share.png) !important;
         }
 		
 		.view {
-            background-image:url(../img/gridimages/view.png) !important;
+            background-image:url(/img/gridimages/view.png) !important;
         }
 		.view:hover {
-            background-image:url(../img/gridimages/view_hover.png) !important;
+            background-image:url(/img/gridimages/view_hover.png) !important;
         }
 
 		.editsurvey {
-            background-image:url(../img/gridimages/page.png) !important;
+            background-image:url(/img/gridimages/page.png) !important;
         }
 		.editsurvey:hover {
-            background-image:url(../img/gridimages/page_hover.png) !important;
+            background-image:url(/img/gridimages/page_hover.png) !important;
         }
 
 				.pageadd {
-            background-image:url(../img/gridimages/page_add.png) !important;
+            background-image:url(/img/gridimages/page_add.png) !important;
         }
 				.next {
-            background-image:url(../img/gridimages/next.png) !important;
+            background-image:url(/img/gridimages/next.png) !important;
         }
 
 		.login {
-            background-image:url(../img/gridimages/login.png) !important;
+            background-image:url(/img/gridimages/login.png) !important;
         }
 		.login:hover {
-            background-image:url(../img/gridimages/login_hover.png) !important;
+            background-image:url(/img/gridimages/login_hover.png) !important;
         }
 
 				.restore{
-            background-image:url(../img/gridimages/restore.png) !important;
+            background-image:url(/img/gridimages/restore.png) !important;
         }
 
 		.go {
-            background-image:url(../img/gridimages/go.png) !important;
+            background-image:url(/img/gridimages/go.png) !important;
         }
 		.go:hover {
-            background-image:url(../img/gridimages/go_hover.png) !important;
+            background-image:url(/img/gridimages/go_hover.png) !important;
         }
 
 				.copy {
-            background-image:url(../img/gridimages/icon_copy.gif) !important;
+            background-image:url(/img/gridimages/icon_copy.gif) !important;
         }
 				.copy_survey {
-            background-image:url(../img/gridimages/copy.jpg) !important;
+            background-image:url(/img/gridimages/copy.jpg) !important;
         }
 				.add {
-            background-image:url(../img/gridimages/add.png) !important;
+            background-image:url(/img/gridimages/add.png) !important;
         }
 				.view_contacts {
-            background-image:url(../img/gridimages/view_contacts.gif) !important;
+            background-image:url(/img/gridimages/view_contacts.gif) !important;
         }
         .save {
-            background-image:url(../img/gridimages/save.gif) !important;
+            background-image:url(/img/gridimages/save.gif) !important;
         }
 				.send_email {
-            background-image:url(../img/gridimages/send_email.png) !important;
+            background-image:url(/img/gridimages/send_email.png) !important;
         }
 
         .search {
-            background-image:url(../img/gridimages/go.png) !important;
+            background-image:url(/img/gridimages/go.png) !important;
         }
 		.search:hover {
-            background-image:url(../img/gridimages/go_hover.png) !important;
+            background-image:url(/img/gridimages/go_hover.png) !important;
         }
 
 		.share {
-            background-image:url(../img/gridimages/share.png) !important;
+            background-image:url(/img/gridimages/share.png) !important;
         }
 		.share:hover {
-            background-image:url(../img/gridimages/share_hover.png) !important;
+            background-image:url(/img/gridimages/share_hover.png) !important;
         }
 
 		.remove {
-            background-image:url(../img/gridimages/del.png) !important;
+            background-image:url(/img/gridimages/del.png) !important;
         }
 		.remove:hover {
-            background-image:url(../img/gridimages/del_hover.png) !important;
+            background-image:url(/img/gridimages/del_hover.png) !important;
         }
  

@@ -13,9 +13,9 @@
 <?php echo $this->Html->script('ext-2.2/Ext.ux.Toast'); ?>
 <?php echo $this->Html->script('ext-2.2/HistoryClearableComboBox'); ?>
 <?php echo $this->Html->script('core_common'); ?>
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/ext-all.css' />
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/xtheme-gray.css' />
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/Ext.ux.grid.RowActions.css' />
+<link rel='StyleSheet' href='<?php echo $this->Url->build('/', ['fullBase' => false]) ?>js/ext-2.2/resources/css/ext-all.css' />
+<link rel='StyleSheet' href='<?php echo $this->Url->build('/', ['fullBase' => false]) ?>js/ext-2.2/resources/css/xtheme-gray.css' />
+<link rel='StyleSheet' href='<?php echo $this->Url->build('/', ['fullBase' => false]) ?>js/ext-2.2/resources/css/Ext.ux.grid.RowActions.css' />
 <?php echo $this->Html->css('calender'); ?>
 <?php echo $this->Html->script('calender'); ?>
 
@@ -27,7 +27,7 @@
 <header>
 <div class="bigHead2">
 <div class="logoOther">
-<a href="<?php echo $this->webroot; ?>Reports/report_hsse_list"><img src="<?php echo $this->webroot; ?>images/huracan_logo.png" alt="Huracan" title="Huracan"></a>
+<a href="<?= $this->Url->build('/', ['fullBase' => false])?>Reports/report_hsse_list"><img src="<?= $this->Url->build('/', ['fullBase' => false])?>images/huracan_logo.png" alt="Huracan" title="Huracan"></a>
 </div>
 <div class="headRight">
 <div class="support">
@@ -37,7 +37,7 @@
  <div class="clear"></div>
  </div>
 <div class="userId2">
-<a href="<?php echo $this->webroot; ?>AdminMasters/logout" title="Logout"><img src="<?php echo $this->webroot; ?>images/icon-logout.png"></a></div>
+<a href="<?= $this->Url->build('/', ['fullBase' => false])?>grep AdminMasters/logout" title="Logout"><img src="<?= $this->Url->build('/', ['fullBase' => false])?>images/icon-logout.png"></a></div>
 <div class="clear"></div>
  </div>
 </div>

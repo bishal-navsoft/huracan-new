@@ -51,11 +51,6 @@ class AdminMastersController extends AppController
         $this->request->getSession()->write('Config.language', $language_code);
         return $this->redirect($this->referer());
     }
-
-     public function test()
-    {
-        debug("dfghjkl");
-    }
     // Administrator index / login
     public function index()
     {
@@ -70,7 +65,7 @@ class AdminMastersController extends AppController
 
         // If already logged in (legacy _checkAdminLogin), you should replace with Authentication plugin check.
         if ($session->read('admin_id')) {
-            return $this->redirect(['controller' => 'Reports', 'action' => 'reportHsseList']);
+            return $this->redirect(['controller' => 'Reports', 'action' => 'report_hsse_list']);
         }
 
         if ($this->request->is('post')) {
@@ -104,12 +99,15 @@ class AdminMastersController extends AppController
                     ->contain(['RoleMasters'])
                     ->first();
 
+
                 // write legacy session keys
                 $session->write('adminData', $adminData);
                 $session->write('sess_id', session_id());
                 $session->write('admin_id', $adminData->id);
                 $session->write('admin_user_name', $adminData->admin_user);
                 $session->write('admin_email', $adminData->admin_email);
+                //dd("login done ");
+                // dd($session->read()); 
 
                 return $this->redirect(['controller' => 'Reports', 'action' => 'reportHsseList']);
             }
@@ -546,13 +544,88 @@ class AdminMastersController extends AppController
 
     public function _getRoleMenuPermission(): void
     {
-        // Implement your role permission fetching logic here
-        return;
+        $session = $this->request->getSession();
+        $roleMasterId = $session->read('adminData.AdminMaster.role_master_id');
+        if (!$roleMasterId) {
+            $this->set('admin_menus_children', []);
+            $this->set('admin_menus_parrentdata', []);
+            return;
+        }
+
+        $this->loadModel('RolePermissions');
+        $this->loadModel('AdminMenus');
+
+        $rpmData = $this->RolePermissions->find()
+            ->where(['role_master_id' => $roleMasterId, 'view' => '1'])
+            ->order(['id' => 'ASC'])
+            ->all()
+            ->toArray();
+
+        $admin_menus_children = [];
+        $admin_menus_parentId = [];
+        $admin_menus_parrentdata = [];
+
+        foreach ($rpmData as $rpmRow) {
+            $adminMenuId = $rpmRow->admin_menu_id ?? null;
+            if ($adminMenuId) {
+                $admin_menus_data = $this->AdminMenus->find()
+                    ->where(['id' => $adminMenuId])
+                    ->all()
+                    ->toArray();
+                if (!empty($admin_menus_data)) {
+                    $parentId = $admin_menus_data[0]->parent_id ?? null;
+                    $admin_menus_children[$parentId][] = $admin_menus_data[0];
+                    $admin_menus_parentId[] = $parentId;
+                }
+            }
+        }
+
+        $admin_menus_parentId = array_values(array_unique($admin_menus_parentId));
+        foreach ($admin_menus_parentId as $pid) {
+            $parent = $this->AdminMenus->find()->where(['id' => $pid])->all()->toArray();
+            if (!empty($parent)) {
+                $admin_menus_parrentdata[] = $parent[0];
+            }
+        }
+
+        $this->set('admin_menus_children', $admin_menus_children);
+        $this->set('admin_menus_parrentdata', $admin_menus_parrentdata);
     }
 
     public function grid_access()
     {
-        // Implement grid access logic or permissions
-        return;
+        $controller = $this->request->getParam('controller');
+        $action = $this->request->getParam('action');
+        $session = $this->request->getSession();
+        $roleId = $session->read('adminData.AdminMaster.role_master_id');
+
+        // derive url pattern used in original code
+        $urlLike = $controller . '/' . $action;
+        if (in_array($controller, ['Reports','Sqreports','Jrns','Audits','Jobs','Lessons','Certifications','Documents','Suggestions','Jhas'])) {
+            $urlLike = 'Reports/report_hsse_list';
+        }
+        if ($controller === 'RoleMasters') {
+            $urlLike = 'RoleMasters/list_roles';
+        }
+
+        $this->loadModel('RolePermissions');
+        $this->loadModel('AdminMenus');
+
+        $roleMenuData = $this->RolePermissions->find()
+            ->contain(['AdminMenus'])
+            ->where([
+                'RolePermissions.role_master_id' => $roleId,
+                'AdminMenus.url LIKE' => $urlLike,
+                'AdminMenus.parent_id !=' => 0
+            ])
+            ->first();
+
+        $rp = $roleMenuData ? $roleMenuData->toArray() : null;
+
+        $this->set('is_add', ($roleMenuData && $roleMenuData->add == 1) ? 1 : 0);
+        $this->set('is_view', ($roleMenuData && $roleMenuData->view == 1) ? 1 : 0);
+        $this->set('is_edit', ($roleMenuData && $roleMenuData->edit == 1) ? 1 : 0);
+        $this->set('is_block', ($roleMenuData && $roleMenuData->block == 1) ? 1 : 0);
+        $this->set('is_delete', ($roleMenuData && $roleMenuData->delete == 1) ? 1 : 0);
     }
 }

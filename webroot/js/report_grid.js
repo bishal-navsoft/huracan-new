@@ -7,13 +7,11 @@ function onFilterItemCheck(item, checked){
     }
  
  
- function checkboxAction(){
- }
+function checkboxAction(){
+}
 
 //Function for unblock selected records
 function delete_hsse_report_main(id){
-	
-	
 	if(confirm("Do You Want To Delete?"))
 	  {
 		$.ajax({
@@ -21,36 +19,26 @@ function delete_hsse_report_main(id){
 				url: path+"Reports/main_delete/",
 				data:"id="+id,
 				success: function(res)
-				{
-						      
+				{	      
 				   if(res=='ok'){
 					 document.location=path+'Reports/report_hsse_list';
 				       }
-				      
-				      
 				   }
 		      });
 	  }else{
 		return  false;
 	  }
-	
-	
 }
 
 function unblockSelected()
 {
-	
-	
-						
 	var selectedArray = new Array();
     selectedArray = checkBox.getSelections();
 	if(selectedArray.length == 0)
 	{
-	
 		return false;
 	}	
-	
-	
+
 	if(is_block == 1)
 	{
 		Ext.Msg.show({
@@ -60,15 +48,15 @@ function unblockSelected()
 			       ,buttons:Ext.Msg.YESNO
 			       ,scope:this
 			       ,fn:function(response) {
-				       if('yes' !== response) {
-					       return;
-				       }
-				       else
-				       {
-					       var box = Ext.MessageBox.wait(please_wait, performing_actions);
-					       var selectedIds = "";
-					       for(var i=0; i<selectedArray.length; i++)
-					       {
+				       	if('yes' !== response) {
+					       	return;
+				       	}
+				       	else
+				       	{
+							var box = Ext.MessageBox.wait(please_wait, performing_actions);
+							var selectedIds = "";
+							for(var i=0; i<selectedArray.length; i++)
+					       	{
 						       if(i==0)
 						       {
 							       selectedIds = selectedArray[i]["data"]["id"];
@@ -76,33 +64,29 @@ function unblockSelected()
 						       {
 							       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
 						       }						
-						       
-						       
-	
-					       }
-					       Ext.Ajax.request(
-										       {
-													url: path+'Reports/report_unblock/'+selectedIds+'/'
-													,method:'GET'
-													,success: function(response){
-													       ds.reload();
-													       box.hide();
-												       }
-												       ,failure: function(response){
-													       box.hide();
-													       Ext.Msg.alert(err, err_unblock);
-													       
-													       //ds.load();
-												       }
-												       ,scope: this
-															
-										       })
-														       
-					       
-				       }
-	//              console.info('Deleting record');
-			       }
-	});
+						    }
+					       	Ext.Ajax.request(
+							{
+								url: path+'Reports/report_unblock/'+selectedIds+'/'
+								,method:'GET'
+								,success: function(response){
+										ds.reload({
+											params: ds.lastOptions.params
+										});
+										box.hide();
+									}
+									,failure: function(response){
+										box.hide();
+										Ext.Msg.alert(err, err_unblock);
+										
+										//ds.load();
+									}
+									,scope: this
+							})
+						}
+						//console.info('Deleting record');
+			       	}
+				});
 	
 	}
 	else
@@ -135,147 +119,145 @@ function blockSelected()
 					       }
 					       else
 					       {
-						       var box = Ext.MessageBox.wait(please_wait, performing_actions);										
-							   var selectedIds = "";
-						       for(var i=0; i<selectedArray.length; i++)
-						       {
-							       if(i==0)
-							       {
+						       	var box = Ext.MessageBox.wait(please_wait, performing_actions);										
+							   	var selectedIds = "";
+						       	for(var i=0; i<selectedArray.length; i++)
+						       	{
+							       	if(i==0)
+							       	{
 								       selectedIds = selectedArray[i]["data"]["id"];
-							       }else
-							       {
+							       	}else
+							       	{
 								       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
-							       }						
-							       
-							       
-
-						       }
-						       Ext.Ajax.request(
-											       {
-														url: path+'Reports/report_block/'+selectedIds+'/'
-														,method:'GET'
-														,success: function(response){
-														       ds.reload();
-														       box.hide();
-													       }
-													       ,failure: function(response){
-														       box.hide();
-														       Ext.Msg.alert(err, err_block);
-														       
-														       //ds.load();
-													       }
-													       ,scope: this
-																
-											       })
-										       
-						       
-					       }
-	       //              console.info('Deleting record');
-				       }
-	});
+							       	}						
+							    }
+						       	Ext.Ajax.request(
+								{
+									url: path+'Reports/report_block/'+selectedIds+'/'
+									,method:'GET'
+									,success: function(response){
+										ds.reload({
+											params: ds.lastOptions.params
+										});
+										box.hide();
+										}
+										,failure: function(response){
+											box.hide();
+											Ext.Msg.alert(err, err_block);
+											
+											//ds.load();
+										}
+										,scope: this
+											
+								})
+							}
+	       					//console.info('Deleting record');
+				       	}
+					});
 	}
 	else
 	{
 		Ext.Msg.alert(warning,not_allowed_access);
 	}			
-	
-	
 }
 
-function deleteSelected()
-{
-
-	var selectedArray = new Array();
-    selectedArray = checkBox.getSelections();
-	if(selectedArray.length == 0)
+	function deleteSelected()
 	{
-		
-		return false;
-	}
-	if(is_delete == 1)
-	{
-		Ext.Msg.show({
-					title:del_select_record
-				       ,msg:delete_select_record + '</b><br/>' + no_undo
-				       ,icon:Ext.Msg.QUESTION
-				       ,buttons:Ext.Msg.YESNO
-				       ,scope:this
-				       ,fn:function(response) {
-					       if('yes' !== response) {
-						       return;
-					       }
-					       else
-					       {
-						       var box = Ext.MessageBox.wait(please_wait, performing_actions);
-						       var selectedIds = "";
-						       for(var i=0; i<selectedArray.length; i++)
-						       {
-							       if(i==0)
-							       {
-								       selectedIds = selectedArray[i]["data"]["id"];
-								       
-							       }else
-							       {
-								       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
-							       }						
-							       
-							       
 
-						       }
+		var selectedArray = new Array();
+		selectedArray = checkBox.getSelections();
+		if(selectedArray.length == 0)
+		{
+			
+			return false;
+		}
+		if(is_delete == 1)
+		{
+			Ext.Msg.show({
+						title:del_select_record
+						,msg:delete_select_record + '</b><br/>' + no_undo
+						,icon:Ext.Msg.QUESTION
+						,buttons:Ext.Msg.YESNO
+						,scope:this
+						,fn:function(response) {
+							if('yes' !== response) {
+								return;
+							}
+							else
+							{
+								var box = Ext.MessageBox.wait(please_wait, performing_actions);
+								var selectedIds = "";
+								for(var i=0; i<selectedArray.length; i++)
+								{
+									if(i==0)
+									{
+										selectedIds = selectedArray[i]["data"]["id"];
+										
+									}else
+									{
+										selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
+									}						
+									
+									
+
+								}
+							
+										delete_hsse_report_main(selectedIds);
+
+								
+								
+												
+								
+							}
+			//              console.info('Deleting record');
+						}
+		});
 						
-				                       delete_hsse_report_main(selectedIds);
-
-						       
-						       
-										       
-						       
-					       }
-	       //              console.info('Deleting record');
-				       }
-	});
-					
+		}
+		else
+		{
+			Ext.Msg.alert(warning,not_allowed_access);
+		}
+		
 	}
-	else
-	{
-		Ext.Msg.alert(warning,not_allowed_access);
-	}
-	
-}
 
-var ds = new Ext.data.Store({	
-        proxy: new Ext.data.HttpProxy({url: AdminListPage+'Reports/get_all_report/'+action+'/'}),  //note that I used host in the url
-        reader: new Ext.data.JsonReader({
+	var ds = new Ext.data.Store({	
+        proxy: new Ext.data.HttpProxy({
+		url: AdminListPage+'reports/get_all_report/'+action+'/',
+		headers: {
+        'X-CSRF-Token': csrfToken}, method: 'GET'}),
+		//note that I used host in the url
+		reader: new Ext.data.JsonReader({
         root: 'admins',
-	totalProperty: 'total',
+		totalProperty: 'total',
         remoteSort: true,
 		fields: [
-        {name: 'id'},
-	{name: 'report_no'},
-	{name: 'event_date'},
-        {name: 'closer_date'},
-        {name: 'event_date'},
-	{name: 'event_date_val'},
-	{name: 'client'},
-	{name: 'incident_severity'},
-	{name: 'incident_severity_name'},
-	{name: 'client_name'},
-	{name: 'creater_name'},
-	{name: 'remidial'},
-	{name: 'summary'},
-	{name: 'isblocked'},
-	{name: 'edit_permit',type: 'boolean'},
-	{name: 'view_permit',type: 'boolean'},
-	{name: 'delete_permit',type: 'boolean'},
-	{name: 'block_permit',type: 'boolean'},
-	{name: 'unblock_permit',type: 'boolean'},
-	{name: 'blockHideIndex', type: 'boolean'},
-	{name: 'unblockHideIndex', type: 'boolean'},
-	{name: 'isdeletdHideIndex', type: 'boolean'}, 
-	{name: 'checkbox_permit', type: 'boolean'},
-	]
+			{name: 'id'},
+			{name: 'report_no'},
+			{name: 'event_date'},
+			{name: 'closer_date'},
+        	{name: 'event_date'},
+			{name: 'event_date_val'},
+			{name: 'client'},
+			{name: 'incident_severity'},
+			{name: 'incident_severity_name'},
+			{name: 'client_name'},
+			{name: 'creater_name'},
+			{name: 'remidial'},
+			{name: 'summary'},
+			{name: 'isblocked'},
+			{name: 'edit_permit',type: 'boolean'},
+			{name: 'view_permit',type: 'boolean'},
+			{name: 'delete_permit',type: 'boolean'},
+			{name: 'block_permit',type: 'boolean'},
+			{name: 'unblock_permit',type: 'boolean'},
+			{name: 'blockHideIndex', type: 'boolean'},
+			{name: 'unblockHideIndex', type: 'boolean'},
+			{name: 'isdeletdHideIndex', type: 'boolean'}, 
+			{name: 'checkbox_permit', type: 'boolean'},
+		]
 	})
     });  
-	
 	
 	var pagingBar = new Ext.PagingToolbar({
         pageSize: eval(pagelmt),
@@ -286,10 +268,10 @@ var ds = new Ext.data.Store({
         
     });
 
-       var strListVal =listVal.split(',');
-       var checkBox = new Ext.grid.CheckboxSelectionModel({
+	var strListVal =listVal.split(',');
+	var checkBox = new Ext.grid.CheckboxSelectionModel({
 		
-		renderer: function(v, p, record, rowIndex){
+	renderer: function(v, p, record, rowIndex){
 		var j = strListVal[rowIndex];
 		if(j==1)
 		{
@@ -306,206 +288,143 @@ var ds = new Ext.data.Store({
 	 			this.grid.getSelectionModel().deselectRow(rowIndex, true);
 				this.grid.getSelectionModel().selectRow(rowIndex, true);
 			 }
-			
-	 			
-			       
-	 		rowIndex++;
-			
+			    
+	 		rowIndex++;		
 		}
 		}
-         });
+	});
  
-		
-		
-		
-		 //var checkBox='';
+	//var checkBox='';
 		var Actions = new Ext.ux.grid.RowActions({
-				header:acts	
-				,dataIndex: 0
-				,actions: [{
-					
-					qtip: edt,
-					iconCls: 'edit',
-					hideIndex : 'edit_permit',
-					callback:function(grid, records, action, groupId) {
-				
-							    if(is_edit == 1)
-							    {
-								    
-								    var redirectPath=path+"Reports/add_report_main/"+Base64.encode(records['data']['id'])+"/";
-								    window.open(redirectPath);
-							    }
-							    else
-							    {
-								    Ext.Msg.alert(warning,not_allowed_access);
-							    }	
-							    
-						
-										
-				        }
-		     },{
-			
-			qtip: activ,
-			iconCls: 'unblock',
-			hideIndex : 'blockHideIndex',
-			callback:function(grid, records, action, groupId) {	
-	
-				var tp="Activate";
-				var turl="unblock";
-				if(records['data']['isblocked']=="Y")
-				{
-					if(is_block == 1)
-					{
-						
-					Ext.Msg.show({
-						title:tp + ' record'
-						,msg:activate_mobile_site + '<br/>'
-						,icon:Ext.Msg.QUESTION
-						,buttons:Ext.Msg.YESNO
-						,scope:this
-						,fn:function(response) {
-							if('yes' !== response) {
-							return;
-							}
-							else
-							{
-							
-								var box = Ext.MessageBox.wait(please_wait, performing_actions);
-								Ext.Ajax.request(
-								{
-									url: path+'Reports/report_unblock/'+records['data']['id']+'/'
-									,method:'GET'
-									,success: function(response){
-										ds.reload();
-										box.hide();
-									}
-									,failure: function(response){
-										Ext.Msg.alert(err, err_unblock);
-										//ds.load();
-									}
-									,scope: this
-												 
-								});	
-							}
-				//              	console.info('Deleting record');
-						}
-						});
+		header: acts,
+		dataIndex: 0,
+		actions: [
+			{
+				qtip: edt,
+				iconCls: 'edit',
+				hide: 'edit_permit',
+				callback: function(grid, record, action, rowIndex) {
+					//console.log('edit_permit', record.get('edit_permit'));
+					//console.log(record.get('id'));
+					if (record.get('edit_permit') && is_edit == 1) {
+						var redirectPath = path + "Reports/add_report_main/" + Base64.encode(String(record.get('id'))) + "/";
+						window.open(redirectPath);
+					} else {
+						Ext.Msg.alert(warning, not_allowed_access);
 					}
-				else
-				{
-					Ext.Msg.alert(warning,not_allowed_access);
 				}
-				}else{
-					  Ext.Msg.alert(message,already_delivered);
+			},
+			{
+				qtip: activ,
+				iconCls: 'unblock',
+				hide: 'blockHideIndex',
+				callback: function(grid, record, action, rowIndex) {
+					console.log('blockHideIndex', record.get('blockHideIndex'));
+					if (record.get('blockHideIndex') && record.get('isblocked') === 'Y') {
+						if (is_block == 1) {
+							Ext.Msg.show({
+								title: "Activate record",
+								msg: activate_mobile_site + '<br/>',
+								icon: Ext.Msg.QUESTION,
+								buttons: Ext.Msg.YESNO,
+								scope: this,
+								fn: function(response) {
+									if (response !== 'yes') return;
+									var box = Ext.MessageBox.wait(please_wait, performing_actions);
+									Ext.Ajax.request({
+										url: path + 'Reports/report_unblock/' + record.get('id') + '/',
+										method: 'GET',
+										success: function(response) {
+											ds.reload({
+												params: ds.lastOptions.params
+											});
+											box.hide();
+										},
+										failure: function(response) {
+											Ext.Msg.alert(err, err_unblock);
+										},
+										scope: this
+									});
+								}
+							});
+						} else {
+							Ext.Msg.alert(warning, not_allowed_access);
+						}
+					} else {
+						Ext.Msg.alert(message, already_delivered);
+					}
 				}
-			
-				
+			},
+			{
+				qtip: deactiv,
+				iconCls: 'block',
+				hide: 'unblockHideIndex',
+				callback: function(grid, record, action, rowIndex) {
+					console.log('unblockHideIndex', record.get('unblockHideIndex'));
+					if (record.get('unblockHideIndex') && record.get('isblocked') === 'N') {
+						if (is_block == 1) {
+							Ext.Msg.show({
+								title: "Deactivate record",
+								msg: deactivate_mobile_site + '<br/>',
+								icon: Ext.Msg.QUESTION,
+								buttons: Ext.Msg.YESNO,
+								scope: this,
+								fn: function(response) {
+									if (response !== 'yes') return;
+									var box = Ext.MessageBox.wait(please_wait, performing_actions);
+									Ext.Ajax.request({
+										url: path + 'Reports/report_block/' + record.get('id') + '/',
+										method: 'GET',
+										success: function(response) {
+											ds.reload({
+												params: ds.lastOptions.params
+											});
+											box.hide();
+										},
+										failure: function(response) {
+											Ext.Msg.alert(err, err_unblock);
+										},
+										scope: this
+									});
+								}
+							});
+						} else {
+							Ext.Msg.alert(warning, not_allowed_access);
+						}
+					} else {
+						Ext.Msg.alert(message, already_not_delivered);
+					}
+				}
+			},
+			{
+				qtip: dlt,
+				iconCls: 'remove',
+				hide: 'delete_permit',
+				callback: function(grid, record, action, rowIndex) {
+					console.log('delete_permit', record.get('delete_permit'));
+					if (record.get('delete_permit') && is_delete == 1) {
+						delete_hsse_report_main(record.get('id'));
+					} else {
+						Ext.Msg.alert(warning, not_allowed_access);
+					}
+				}
+			},
+			{
+				qtip: view,
+				iconCls: 'view',
+				hide: 'view_permit',
+				callback: function(grid, record, action, rowIndex) {
+					console.log('view_permit', record.get('view_permit'));
+					if (record.get('view_permit') && is_view == 1) {
+						document.location = path + 'Reports/add_report_view/' + Base64.encode(record.get('id'));
+					} else {
+						Ext.Msg.alert(warning, not_allowed_access);
+					}
+				}
 			}
-			
-		},{
-			
-		    	
-			qtip: deactiv,
-			iconCls: 'block',
-			hideIndex : 'unblockHideIndex',
-			callback:function(grid, records, action, groupId) {
-			
-				var tp="Deactivate";
-				var turl="block";
-				if(records['data']['isblocked']=="N")
-				{
-					if(is_block == 1)
-					{
-					Ext.Msg.show({
-						title:tp + ' record'
-						,msg:deactivate_mobile_site + '<br/>'
-						,icon:Ext.Msg.QUESTION
-						,buttons:Ext.Msg.YESNO
-						,scope:this
-						,fn:function(response) {
-							if('yes' !== response) {
-								return;
-							}
-							else
-							{
-								var box = Ext.MessageBox.wait(please_wait, performing_actions);
-								Ext.Ajax.request(
-								{
-									 url: path+'Reports/report_block/'+records['data']['id']+'/'
-									 ,method:'GET'
-   //,params:{id:record.data.id,con:'games',act:'movetoup'}
-									,success: function(response){
-										ds.reload();
-										box.hide();
-									}
-									,failure: function(response){
-										Ext.Msg.alert(err, err_unblock);
-										//ds.load();
-									}
-									,scope: this
-											 
-								 });						 
-							}
-							//console.info('Deleting record');
-						}
-						});
-					}
-					else
-					{
-						Ext.Msg.alert(warning,not_allowed_access);
-					}
-				}
-				else
-				{
-					Ext.Msg.alert(message,already_not_delivered);
-				}
-			
-		}	
-		},{
-		    	
-			qtip: dlt,
-			iconCls: 'remove',
-			hideIndex : 'delete_permit',
-			callback:function(grid, records, action, groupId) {				
-				
-					if(is_delete == 1)
-						{
-						  delete_hsse_report_main(records['data']['id']);
-						}
-						else
-						{
-							Ext.Msg.alert(warning,not_allowed_access);
-						}
-					
-				
-		        }
-			
-		},{
-		
-			qtip: view,
-			iconCls: 'view',
-			hideIndex : 'view_permit',
-			callback:function(grid, records, action, groupId) {
-			
-				var tp="View";
-				var turl="block";
-				
-					if(is_view == 1)
-						{
-						document.location=path+'Reports/add_report_view/'+Base64.encode(records['data']['id']);    
-						}
-						else
-						{
-							Ext.Msg.alert(warning,not_allowed_access);
-						}
-				
-			       
-		        }	
-			
-		}]
-		});
+		]
+	});
 	
-		
 	function status(val)
 	{
 		if(val == "N"){ return act;}		
@@ -523,16 +442,14 @@ var ds = new Ext.data.Store({
 	
         {header: reportno,sortable: true,  dataIndex: 'report_no', width:150},
         {header: event,sortable: true, dataIndex: 'event_date_val', width:100},
-	{header: summary,sortable: true, dataIndex: 'summary', width:170},
-	{header: client,sortable: true, dataIndex: 'client_name', width:160},
-	{header: incident_severity_name,sortable: true, dataIndex: 'incident_severity_name', width:120},
-	{header: createdby,sortable: true, dataIndex: 'creater_name', width:150},
+		{header: summary,sortable: true, dataIndex: 'summary', width:170},
+		{header: client,sortable: true, dataIndex: 'client_name', width:160},
+		{header: incident_severity_name,sortable: true, dataIndex: 'incident_severity_name', width:120},
+		{header: createdby,sortable: true, dataIndex: 'creater_name', width:150},
         {header: closure,sortable: true, dataIndex: 'closer_date', width:90},
         {header: remedial,sortable: true, dataIndex: 'remidial', width:100},
-	
-        {header: stts, sortable: true, renderer: status, dataIndex: 'isblocked', width: 80}
-	
-		
+		{header: stts, sortable: true, renderer: status, dataIndex: 'isblocked', width: 80}
+
     ]);
 	
 	
@@ -661,30 +578,44 @@ var ds = new Ext.data.Store({
     });
 	
 
-	var button = toolBar.addButton( {
-						text: '',
-						disabled:false,
-						iconCls:'search',
-						tooltip:go,
-						handler : function(){                         
-						 var filterCol = filterMenuItems.filter(function(element, index, array) {
-							return element.checked;
-						})[0].id;
+	var button = toolBar.addButton({
+		text: '',
+		disabled:false,
+		iconCls:'search',
+		tooltip:go,
+		handler : function(){                         
+		var filterCol = filterMenuItems.filter(function(element, index, array) {
+			return element.checked;
+		})[0].id;
 						
-						if(combo.getValue() == "")
-						{
-							alert(provide_search_string);
-							return false;
-						}
+		if(combo.getValue() == "")
+		{
+			alert(provide_search_string);
+			return false;
+		}
 						
-						ds.load({params:{start: 0, limit: pagelmt, filter: filterCol, value: combo.getValue()}});
+		ds.load({params:{
+			start: 0, 
+			limit: pagelmt, 
+			filter: filterCol, 
+			value: combo.getValue()
+		}});
 						 
-                         }
-                     }); 
+    	}
+    }); 
 
     //toolBar.addSeparator();
 
 	ds.load({params:{start: 0, limit: pagelmt}});
+
+	ds.on('beforeload', function(store, options) {
+		console.log('Loading with params:', options.params);
+	});
+
+	ds.on('load', function(store, records, options) {
+		console.log('Loaded records:', records.length, 'Total:', store.getTotalCount());
+	});
+	
     //ds.loadData(<?php echo '{"total":'.$total.', "products":'.$javascript->Object($products).'}'; ?>); //This loads data from the database into the datastore.
  
 	//grid.render('grid-paging');  //This renders our grid to the grid-paging div in our index.ctp view.

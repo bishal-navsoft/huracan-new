@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use Cake\Controller\Controller;
+use Cake\Core\Configure; 
 use Cake\Event\EventInterface;
 use Cake\ORM\TableRegistry;
 use Cake\Mailer\Email;
@@ -62,6 +63,7 @@ class AppController extends Controller
     {
         parent::beforeFilter($event);
         // place for global beforeFilter logic
+        
     }
 
     // --------------------- Utility methods ---------------------
@@ -166,7 +168,9 @@ class AppController extends Controller
     public function _checkAdminSession()
     {
         $session = $this->request->getSession();
+        //dd($session->read());
         if (!$session->check('admin_id')) {
+            //dd("rftgyhjukil");
             $this->Flash->error('You need to be logged in to access this area.');
             $requested = $this->request->getRequestTarget();
             if ($requested) {
@@ -174,18 +178,39 @@ class AppController extends Controller
             }
             return $this->redirect(['controller' => 'AdminMasters', 'action' => 'index']);
         }
+        $adminData = $session->read('adminData');
+        if (is_object($adminData)) 
+        {
+            $adminData = $adminData->toArray();
+        }
+        $finalData = [
+            'AdminMaster' => $adminData,
+            'RoleMaster' => [
+                'id' => $adminData['role_master_id'] ?? null
+            ]
+        ];
+        return $finalData;
+        //return $session->read(); 
     }
 
     // --------------------- Role menu permission ---------------------
     public function _getRoleMenuPermission(): void
     {
         $session = $this->request->getSession();
-        $roleMasterId = $session->read('adminData.AdminMaster.role_master_id');
+        //dd($session->read()); 
+        // dd("dfyhju");
+         //$roleMasterId = $session->read('adminData.AdminMaster.role_master_id');
+        $adminData = $session->read('adminData');
+        //$roleMasterId = $adminData->role_master_id;
+        $roleMasterId = $adminData['role_master_id'] ?? null;
+         //debug($roleMasterId);
+       
         if (!$roleMasterId) {
             $this->set('admin_menus_children', []);
             $this->set('admin_menus_parrentdata', []);
             return;
         }
+        // debug("fuol;");
 
         $this->loadModel('RolePermissions');
         $this->loadModel('AdminMenus');
@@ -195,7 +220,7 @@ class AppController extends Controller
             ->order(['id' => 'ASC'])
             ->all()
             ->toArray();
-
+        
         $admin_menus_children = [];
         $admin_menus_parentId = [];
         $admin_menus_parrentdata = [];
@@ -222,7 +247,7 @@ class AppController extends Controller
                 $admin_menus_parrentdata[] = $parent[0];
             }
         }
-
+        // dd($admin_menus_children,$admin_menus_parrentdata);
         $this->set('admin_menus_children', $admin_menus_children);
         $this->set('admin_menus_parrentdata', $admin_menus_parrentdata);
     }
@@ -236,6 +261,7 @@ class AppController extends Controller
             ->order(['id' => 'DESC'])
             ->all()
             ->toArray();
+        // dd("sdfghjkl",$allHsseReport);
         $this->request->getSession()->write('allHsseReport', $allHsseReport);
     }
 
@@ -268,85 +294,85 @@ class AppController extends Controller
         $type = 'hsse';
 
         // check Reports
-        /*$this->loadModel('Reports');
+        $this->loadModel('Reports');
         $reportDetail = $this->Reports->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportDetail)) {
             $rID = $reportDetail[0]->id ?? $reportDetail[0]['id'] ?? 0;
             $type = 'hsse';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // check SqReportMains
-        /*$this->loadModel('SqReportMains');
+        $this->loadModel('SqReportMains');
         $reportSqDetail = $this->SqReportMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportSqDetail)) {
             $rID = $reportSqDetail[0]->id ?? $reportSqDetail[0]['id'] ?? 0;
             $type = 'sq';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // check JnReportMains by trip_number
-        /*$this->loadModel('JnReportMains');
+        $this->loadModel('JnReportMains');
         $reportJnDetail = $this->JnReportMains->find()->where(['trip_number' => $value])->all()->toArray();
         if (!empty($reportJnDetail)) {
             $rID = $reportJnDetail[0]->id ?? 0;
             $type = 'jn';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // check AuditReportMains
-        /*$this->loadModel('AuditReportMains');
+        $this->loadModel('AuditReportMains');
         $reportAuditDetail = $this->AuditReportMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportAuditDetail)) {
             $rID = $reportAuditDetail[0]->id ?? 0;
             $type = 'audit';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // check JobReportMains
-        /*$this->loadModel('JobReportMains');
+        $this->loadModel('JobReportMains');
         $reportJobDetail = $this->JobReportMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportJobDetail)) {
             $rID = $reportJobDetail[0]->id ?? 0;
             $type = 'job';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // LessonMain
-        /*$this->loadModel('LessonMains');
+        $this->loadModel('LessonMains');
         $reportLessonDetail = $this->LessonMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportLessonDetail)) {
             $rID = $reportLessonDetail[0]->id ?? 0;
             $type = 'lesson';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // DocumentMain
-        /*$this->loadModel('DocumentMains');
+        $this->loadModel('DocumentMains');
         $reportDocDetail = $this->DocumentMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportDocDetail)) {
             $rID = $reportDocDetail[0]->id ?? 0;
             $type = 'document';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // SuggestionMain
-        /*$this->loadModel('SuggestionMains');
+        $this->loadModel('SuggestionMains');
         $reportSuggestionDetail = $this->SuggestionMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportSuggestionDetail)) {
             $rID = $reportSuggestionDetail[0]->id ?? 0;
             $type = 'suggestion';
             return $rID . '~' . $type;
-        }*/
+        }
 
         // JhaMain
-        /*$this->loadModel('JhaMains');
+        $this->loadModel('JhaMains');
         $reportJhaDetail = $this->JhaMains->find()->where(['report_no' => $value])->all()->toArray();
         if (!empty($reportJhaDetail)) {
             $rID = $reportJhaDetail[0]->id ?? 0;
             $type = 'jha';
             return $rID . '~' . $type;
-        }*/
+        }
 
         return '0~hsse';
     }
@@ -663,7 +689,10 @@ class AppController extends Controller
         $controller = $this->request->getParam('controller');
         $action = $this->request->getParam('action');
         $session = $this->request->getSession();
-        $roleId = $session->read('adminData.AdminMaster.role_master_id');
+        // $roleId = $session->read('adminData.AdminMaster.role_master_id');
+        $adminData = $session->read('adminData');
+        //$roleId = $adminData->role_master_id;
+        $roleId = $adminData['role_master_id'] ?? null;
 
         // derive url pattern used in original code
         $urlLike = $controller . '/' . $action;
@@ -687,7 +716,6 @@ class AppController extends Controller
             ->first();
 
         $rp = $roleMenuData ? $roleMenuData->toArray() : null;
-
         $this->set('is_add', ($roleMenuData && $roleMenuData->add == 1) ? 1 : 0);
         $this->set('is_view', ($roleMenuData && $roleMenuData->view == 1) ? 1 : 0);
         $this->set('is_edit', ($roleMenuData && $roleMenuData->edit == 1) ? 1 : 0);

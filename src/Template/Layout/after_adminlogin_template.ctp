@@ -1,63 +1,97 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Huracan</title>
-<?php echo $this->Html->script('jquery'); ?>
-<?php echo $this->Html->css('reset'); ?>
-<?php echo $this->Html->css('screen'); ?>
-<?php echo $this->Html->script('iefix'); ?>
-<?php echo $this->Html->script('ext-2.2/adapter/ext/ext-base'); ?>
-<?php echo $this->Html->script('ext-2.2/ext-all-debug'); ?>
-<?php echo $this->Html->script('ext-2.2/Ext.ux.grid.RowActions'); ?>
-<?php echo $this->Html->script('ext-2.2/Ext.ux.Toast'); ?>
-<?php echo $this->Html->script('ext-2.2/HistoryClearableComboBox'); ?>
-<?php echo $this->Html->script('core_common'); ?>
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/ext-all.css' />
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/xtheme-gray.css' />
-<link rel='StyleSheet' href='<?php echo $this->webroot?>js/ext-2.2/resources/css/Ext.ux.grid.RowActions.css' />
-<?php echo $this->Html->css('calender'); ?>
-<?php echo $this->Html->script('calender'); ?>
+    <meta charset="utf-8">
+    <title>Huracan</title>
+    
+
+    <!-- JS Files -->
+    <?= $this->Html->script('jquery.min.js') ?>
+    <?= $this->Html->script('iefix.js') ?>
+    <?= $this->Html->script('ext-2.2/adapter/ext/ext-base.js') ?>
+    <?= $this->Html->script('ext-2.2/ext-all-debug.js') ?>
+    <?= $this->Html->script('ext-2.2/Ext.ux.grid.RowActions.js') ?>
+    <?= $this->Html->script('ext-2.2/Ext.ux.Toast.js') ?>
+    <?= $this->Html->script('ext-2.2/HistoryClearableComboBox.js') ?>
+    <?= $this->Html->script('core_common.js') ?>
+    <?= $this->Html->script('calender.js') ?>
+
+    <!-- CSS Files -->
+    <?= $this->Html->css('reset.css') ?>
+    <?= $this->Html->css('screen.css') ?>
+    <?= $this->Html->css('calender.css') ?>
+
+    <link rel="stylesheet" href="<?= $this->Url->build('/js/ext-2.2/resources/css/ext-all.css') ?>" />
+    <link rel="stylesheet" href="<?= $this->Url->build('/js/ext-2.2/resources/css/xtheme-gray.css') ?>" />
+    <link rel="stylesheet" href="<?= $this->Url->build('/js/ext-2.2/resources/css/Ext.ux.grid.RowActions.css') ?>" />
 
 </head>
 
 <body>
 <div id="main_container">
-<!--header -->
-<header>
-<div class="bigHead2">
-<div class="logoOther">
-<a href="<?php echo $this->webroot; ?>Reports/report_hsse_list"><img src="<?php echo $this->webroot; ?>images/huracan_logo.png" alt="Huracan" title="Huracan"></a>
+
+    <!-- Header -->
+    <header>
+        <div class="bigHead2">
+
+            <!-- Logo -->
+            <div class="logoOther">
+                <a href="<?= $this->Url->build(['controller'=>'Reports','action'=>'report_hsse_list']) ?>">
+                    <img src="<?= $this->Url->build('/images/huracan_logo.png') ?>" alt="Huracan" title="Huracan">
+                </a>
+            </div>
+
+            <!-- User & Support Info -->
+            <div class="headRight">
+                <div class="support">
+                    <a href="javascript:void(0);"><?= date("l M d, Y") ?></a>
+                </div>
+
+                <div class="userId">
+                    <?php
+                    // Safe session access
+                    $session = $this->request->getSession();
+                    $adminData = $session->read('adminData');
+                    $adminName = '';
+                    if (!empty($adminData) && isset($adminData['first_name'], $adminData['last_name'])) {
+                        $adminName = h($adminData['first_name'] . ' ' . $adminData['last_name']);
+                    }
+                    ?>
+                    <a href="javascript:void(0);"><?= $adminName ?: 'Guest' ?></a>
+                    <div class="clear"></div>
+                </div>
+
+                <div class="userId2">
+                    <a href="<?= $this->Url->build(['controller'=>'AdminMasters','action'=>'logout']) ?>" title="Logout">
+                        <img src="<?= $this->Url->build('/images/icon-logout.png') ?>" alt="Logout">
+                    </a>
+                </div>
+
+                <div class="clear"></div>
+            </div>
+
+        </div>
+
+        <!-- Navigation -->
+        <div class="stepBase">
+            <nav>
+                <?= $this->element('primary_menu') ?>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Body Content -->
+    <div id="body_container">
+        <div class="wrapall clearfix">
+            <?= $this->fetch('content') ?>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer></footer>
+
 </div>
-<div class="headRight">
-<div class="support">
-<a href="javscript:void(0);"><?php echo $today =date("l M d, Y"); ?></a></div>
-<div class="userId">
-<a href="javscript:void(0);"><?php echo $_SESSION['adminData']['AdminMaster']['first_name']." ".$_SESSION['adminData']['AdminMaster']['last_name']; ?></a>
- <div class="clear"></div>
- </div>
-<div class="userId2">
-<a href="<?php echo $this->webroot; ?>AdminMasters/logout" title="Logout"><img src="<?php echo $this->webroot; ?>images/icon-logout.png"></a></div>
-<div class="clear"></div>
- </div>
-</div>
-<div class="stepBase">
-<!--navigation -->
-<nav>
-<?php echo $this->Element('primary_menu'); ?>
-</nav>
-<!--navigation -->
-</div>
-</header>
-<!--header -->
-<div id="body_container">
-<div class="wrapall clearfix">
-<?= $this->fetch('content') ?>
-</div>
-</div>
-<footer>
-</footer>
-</div>
-<?php // echo $this->element("sql_dump"); ?>
+
+<?php // $this->element('sql_dump'); ?>
 </body>
 </html>

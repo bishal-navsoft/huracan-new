@@ -1,4 +1,5 @@
-<?PHP
+<?php
+
 class HsseRemidial extends AppModel
 {
 	public $name = 'HsseRemidial';

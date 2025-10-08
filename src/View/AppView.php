@@ -36,5 +36,8 @@ class AppView extends View
      */
     public function initialize()
     {
+        parent::initialize();
+        $this->loadHelper('Webroot');
+        $this->loadHelper('Js');
     }
 }

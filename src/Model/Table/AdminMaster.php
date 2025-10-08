@@ -1,4 +1,4 @@
-<?PHP
+<?php
 class AdminMaster extends AppModel
 {
 	public $name = 'AdminMaster';
