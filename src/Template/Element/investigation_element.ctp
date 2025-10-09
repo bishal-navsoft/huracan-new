@@ -1,9 +1,9 @@
- <script language="javascript" type="text/javascript">
+<?php $webroot = $this->request->getAttribute('webroot');?>
+<script language="javascript" type="text/javascript">
     
     function add_report_investigation(path)
-     {
-         
-	    var id_holder_list =  document.getElementById('id_holder').value;
+    {
+        var id_holder_list =  document.getElementById('id_holder').value;
 	 
 	    if(id_holder_list==''){
 	       document.getElementById('error_msg').innerHTML='Please select atleast one invesitgation';
@@ -15,213 +15,156 @@
 	    if(document.getElementById('immediate_sub_cause')){
 	        
 		  var immediate_sub_cause =  document.getElementById('immediate_sub_cause').value;
-	       
 	    }
-	     
-	     
-	      var people_title_val = jQuery.trim(document.getElementById('people_title').value);
-	      var people_descrption_val = jQuery.trim(document.getElementById('people_descrption').value);
-	      var position_title_val =  jQuery.trim(document.getElementById('position_title').value);
-	      var position_descrption_val = jQuery.trim(document.getElementById('position_descrption').value);
-	      var part_title_val =  jQuery.trim(document.getElementById('part_title').value);
-	      var part_descrption_val = jQuery.trim(document.getElementById('part_descrption').value);
-	      var paper_title_val = jQuery.trim(document.getElementById('paper_title').value);
-	      var paper_descrption_val =  jQuery.trim(document.getElementById('paper_descrption').value);
+	    var people_title_val = jQuery.trim(document.getElementById('people_title').value);
+		var people_descrption_val = jQuery.trim(document.getElementById('people_descrption').value);
+		var position_title_val =  jQuery.trim(document.getElementById('position_title').value);
+		var position_descrption_val = jQuery.trim(document.getElementById('position_descrption').value);
+		var part_title_val =  jQuery.trim(document.getElementById('part_title').value);
+		var part_descrption_val = jQuery.trim(document.getElementById('part_descrption').value);
+		var paper_title_val = jQuery.trim(document.getElementById('paper_title').value);
+		var paper_descrption_val =  jQuery.trim(document.getElementById('paper_descrption').value);
 	      
-	       
-	      if(people_title_val!='' &&  people_title_val!='Enter People Title'){
-	            if(people_descrption_val=='' || people_descrption_val=='Enter People Description'){
-			 $("#people_title").removeClass("texterrorclass");
-			 $("#people_title").addClass("textclass");  
-		   	 $("#people_descrption").removeClass("textareaclass");
-			 $("#people_descrption").addClass("textarea_error_class");
-			 $("#people_descrption").focus();
-			 return false;
+	    if(people_title_val!='' &&  people_title_val!='Enter People Title'){
+	        if(people_descrption_val=='' || people_descrption_val=='Enter People Description'){
+				$("#people_title").removeClass("texterrorclass");
+				$("#people_title").addClass("textclass");  
+				$("#people_descrption").removeClass("textareaclass");
+				$("#people_descrption").addClass("textarea_error_class");
+				$("#people_descrption").focus();
+			 	return false;
 		    }else{
-	               
-		         $("#people_descrption").removeClass("textarea_error_class");
-			 $("#people_descrption").addClass("textareaclass");
-	       
-	             }
-	
-	      }
+	            $("#people_descrption").removeClass("textarea_error_class");
+			 	$("#people_descrption").addClass("textareaclass");
+	       	}
+		}
 	      
-	      if(people_descrption_val!='' && people_descrption_val!='Enter People Description'){
-	       
-	            if(people_title_val=='' ||  people_title_val=='Enter People Title'){
-			 $("#people_descrption").removeClass("textarea_error_class");
-			 $("#people_descrption").addClass("textareaclass");  
-		   	 $("#people_title").removeClass("textclass");
-			 $("#people_title").addClass("texterrorclass");
-			 $("#people_title").focus();
-			 return false;
+	    if(people_descrption_val!='' && people_descrption_val!='Enter People Description'){
+	       	if(people_title_val=='' ||  people_title_val=='Enter People Title'){
+				$("#people_descrption").removeClass("textarea_error_class");
+				$("#people_descrption").addClass("textareaclass");  
+				$("#people_title").removeClass("textclass");
+				$("#people_title").addClass("texterrorclass");
+				$("#people_title").focus();
+				return false;
 		    }else{
-			  $("#people_title").removeClass("texterrorclass");
-			  $("#people_title").addClass("textclass");
-			 
-		    }
-	
-	      }
+				$("#people_title").removeClass("texterrorclass");
+				$("#people_title").addClass("textclass");
+			}
+		}
 	      
-	      
-	      
-	       if(position_title_val!='' && position_title_val!='Enter Position Title'){
-		     if(position_descrption_val=='' || position_descrption_val=='Enter Position Description'){
-		    	 $("#position_title").removeClass("texterrorclass");
-			 $("#position_title").addClass("textclass");  
-		   	 $("#position_descrption").removeClass("textareaclass");
-			 $("#position_descrption").addClass("textarea_error_class");
-			 $("#position_descrption").focus();
-			 return false;
-		    
-		     }else{
-	         
-		         $("#position_descrption").removeClass("textarea_error_class");
-			 $("#position_descrption").addClass("textareaclass");
-	       
-	           }
-	
-	      }
-	      
-	      if(position_descrption_val!='' && position_descrption_val!='Enter Position Description'){
-	           
-		   if(position_title_val=='' || position_title_val=='Enter Position Title'){
-	       
-			 $("#position_descrption").removeClass("textarea_error_class");
-			 $("#position_descrption").addClass("textareaclass");  
-		   	 $("#position_title").removeClass("textclass");
-			 $("#position_title").addClass("texterrorclass");
-			 $("#position_title").focus();
-			 return false;
-		   }else{
-	                			   
-		   	 $("#position_title").removeClass("texterrorclass");
-			 $("#position_title").addClass("textclass");
-	      
-	          }
-	
-	      }
-	      
-	      
-	      
-	      if(part_title_val!='' && part_title_val!='Enter Parts Title'){
-	            if(part_descrption_val=='' || part_descrption_val=='Enter Parts Description'){
-	       
-			 $("#part_title").removeClass("texterrorclass");
-			 $("#part_title").addClass("textclass");  
-		   	 $("#part_descrption").removeClass("textareaclass");
-			 $("#part_descrption").addClass("textarea_error_class");
-			 $("#part_descrption").focus();
-			 return false;
+	    if(position_title_val!='' && position_title_val!='Enter Position Title'){
+		    if(position_descrption_val=='' || position_descrption_val=='Enter Position Description'){
+		    	$("#position_title").removeClass("texterrorclass");
+				$("#position_title").addClass("textclass");  
+				$("#position_descrption").removeClass("textareaclass");
+				$("#position_descrption").addClass("textarea_error_class");
+				$("#position_descrption").focus();
+			 	return false;
 		    }else{
-			 $("#part_descrption").removeClass("textarea_error_class");
-			 $("#part_descrption").addClass("textareaclass");
-			 
-		    }
-	
-	      }
+	         	$("#position_descrption").removeClass("textarea_error_class");
+			 	$("#position_descrption").addClass("textareaclass");
+	       	}
+		}
 	      
-	   
-	      if(part_descrption_val!='' && part_descrption_val!='Enter Parts Description'){
-	           if(part_title_val=='' || part_title_val=='Enter Parts Title'){
-	       
-			 $("#part_descrption").removeClass("textarea_error_class");
-			 $("#part_descrption").addClass("textareaclass");  
-		   	 $("#part_title").removeClass("textclass");
-			 $("#part_title").addClass("texterrorclass");
-			 $("#part_title").focus();
-			 return false;
+	    if(position_descrption_val!='' && position_descrption_val!='Enter Position Description'){
+	        if(position_title_val=='' || position_title_val=='Enter Position Title'){
+	       		$("#position_descrption").removeClass("textarea_error_class");
+				$("#position_descrption").addClass("textareaclass");  
+				$("#position_title").removeClass("textclass");
+				$("#position_title").addClass("texterrorclass");
+				$("#position_title").focus();
+			 	return false;
+		   	}else{
+				$("#position_title").removeClass("texterrorclass");
+				$("#position_title").addClass("textclass");
+	      	}
+		}
+	      
+	    if(part_title_val!='' && part_title_val!='Enter Parts Title'){
+	        if(part_descrption_val=='' || part_descrption_val=='Enter Parts Description'){
+				$("#part_title").removeClass("texterrorclass");
+				$("#part_title").addClass("textclass");  
+				$("#part_descrption").removeClass("textareaclass");
+				$("#part_descrption").addClass("textarea_error_class");
+				$("#part_descrption").focus();
+				return false;
+		    }else{
+				$("#part_descrption").removeClass("textarea_error_class");
+				$("#part_descrption").addClass("textareaclass");
+			}
+		}
+	      
+	   	if(part_descrption_val!='' && part_descrption_val!='Enter Parts Description'){
+	        if(part_title_val=='' || part_title_val=='Enter Parts Title'){
+	       		$("#part_descrption").removeClass("textarea_error_class");
+				$("#part_descrption").addClass("textareaclass");  
+				$("#part_title").removeClass("textclass");
+				$("#part_title").addClass("texterrorclass");
+				$("#part_title").focus();
+				return false;
+		   	}else{
+	            $("#part_title").removeClass("texterrorclass");
+				$("#part_title").addClass("textclass");
+	      	}
+		}
+	      
+	    if(paper_title_val!='' && paper_title_val!='Enter Paper Title'){
+	        if(paper_descrption_val=='' || paper_descrption_val=='Enter Paper Description'){
+				$("#paper_title").removeClass("texterrorclass");
+				$("#paper_title").addClass("textclass");  
+				$("#paper_descrption").removeClass("textareaclass");
+				$("#paper_descrption").addClass("textarea_error_class");
+				$("#paper_descrption").focus();
+				return false;
 		   }else{
-	                			   
-		   	 $("#part_title").removeClass("texterrorclass");
-			 $("#part_title").addClass("textclass");
+				$("#paper_descrption").removeClass("textarea_error_class");
+				$("#paper_descrption").addClass("textareaclass");
+	       	}
+		}
 	      
-	            }
-	
-	      }
+	    if(paper_descrption_val!='' && paper_descrption_val!='Enter Paper Description'){
+	       	if(paper_title_val=='' || paper_title_val=='Enter Paper Title'){
+				$("#paper_descrption").removeClass("textarea_error_class");
+				$("#paper_descrption").addClass("textareaclass");  
+				$("#paper_title").removeClass("textclass");
+				$("#paper_title").addClass("texterrorclass");
+				$("#paper_title").focus();
+				return false;
+		  	}else{
+				$("#paper_title").removeClass("texterrorclass");
+				$("#paper_title").addClass("textclass");
+		   	}
+		}
 	      
-	      
-	      if(paper_title_val!='' && paper_title_val!='Enter Paper Title'){
-	           if(paper_descrption_val=='' || paper_descrption_val=='Enter Paper Description'){
-			 $("#paper_title").removeClass("texterrorclass");
-			 $("#paper_title").addClass("textclass");  
-		   	 $("#paper_descrption").removeClass("textareaclass");
-			 $("#paper_descrption").addClass("textarea_error_class");
-			 $("#paper_descrption").focus();
-			 return false;
-		   }else{
-	         
-		         $("#paper_descrption").removeClass("textarea_error_class");
-			 $("#paper_descrption").addClass("textareaclass");
-	       
-	           }
-	
-	      }
-	      
-	      
-	      if(paper_descrption_val!='' && paper_descrption_val!='Enter Paper Description'){
-	       
-	          if(paper_title_val=='' || paper_title_val=='Enter Paper Title'){
-	       
-			 $("#paper_descrption").removeClass("textarea_error_class");
-			 $("#paper_descrption").addClass("textareaclass");  
-		   	 $("#paper_title").removeClass("textclass");
-			 $("#paper_title").addClass("texterrorclass");
-			 $("#paper_title").focus();
-			 return false;
-		  }else{
-		   
-		         $("#paper_title").removeClass("texterrorclass");
-			 $("#paper_title").addClass("textclass");
-		   }
-	
-	      }
-	      
-	
-	     
-	     var dataStr = $("#add_report_investigation_form").serialize();
-	
-             var rootpath='<?php echo $this->webroot ?>';
-	     document.getElementById('loader').innerHTML='<img src="<?php echo $this->webroot; ?>img/loader.gif" />';	
-              $.ajax({
-			  type: "POST",
-			  url: path,
-			  data:"data="+dataStr,
-			  success: function(res)
-			  {
-			   
-			  if(res=='fail'){
-				   document.getElementById('loader').innerHTML='<font color="red">Please try again</font>';  
-	                     }else if(res=='add'){
-				   document.getElementById('loader').innerHTML='<font color="green">Investigation Data Added Successfully</font>';
-				  
-			     }else if(res=='Update'){
-				   document.getElementById('loader').innerHTML='<font color="green">Investigation Data Update Successfully</font>';
-				  
-				   
-                             }
-                             
-                             
-                 }
-		 
-	});
-	
-
-	return false;
-	
+		var dataStr = $("#add_report_investigation_form").serialize();
+		var rootpath='<?php echo $webroot ?>';
+	    document.getElementById('loader').innerHTML='<img src="<?php echo $webroot; ?>img/loader.gif" />';	
+			$.ajax({
+				type: "POST",
+				url: path,
+				data:"data="+dataStr,
+				success: function(res)
+				{
+					if(res=='fail'){
+					document.getElementById('loader').innerHTML='<font color="red">Please try again</font>';  
+					}else if(res=='add'){
+					document.getElementById('loader').innerHTML='<font color="green">Investigation Data Added Successfully</font>';
+					}else if(res=='Update'){
+					document.getElementById('loader').innerHTML='<font color="green">Investigation Data Update Successfully</font>';
+					}
+				}
+			});
+			return false;
+	}
  
-}
- 
- 
- function check_character(textareid){
-  
-        var summary =document.getElementById(textareid).value;
-        if(summary.length>5){
-	    var summary_holder=summary.substring(0,1000);
-	    document.getElementById(textareid).value=summary_holder;
-	  	  
-      }
-}
+	function check_character(textareid){
+  		var summary =document.getElementById(textareid).value;
+		if(summary.length>5){
+	    	var summary_holder=summary.substring(0,1000);
+	    	document.getElementById(textareid).value=summary_holder;
+	  	}
+	}
  
  
  

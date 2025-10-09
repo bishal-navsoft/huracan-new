@@ -1,3 +1,4 @@
+ <?php $webroot = $this->request->getAttribute('webroot');?>
  <script language="javascript" type="text/javascript">
 
  function isNumberKey(evt)
@@ -11,54 +12,44 @@
 	     
 function add_report_client()
 {
-             
-
-  
-  
-            var well = jQuery.trim(document.getElementById('well').value);
-	    var rig = jQuery.trim(document.getElementById('rig').value);
-	    var report_id ='<?php echo $report_id;?>';
-	    var clientncr = jQuery.trim(document.getElementById('clientncr').value);
-            var clientreviewed= jQuery.trim(document.getElementById('clientreviewed').value);
-	    if(clientreviewed==3){
-	        var clientreviewer = jQuery.trim(document.getElementById('clientreviewer').value);
-		if(clientreviewer==''){
-		    document.getElementById('client_reviewer_error').innerHTML='Please Enter Client Reviewer';
-		    return false;
-		}else{
-		    document.getElementById('client_reviewer_error').innerHTML='';
-		}
-	       
-	    }
-	   
-	    var wellsiterep = jQuery.trim(document.getElementById('wellsiterep').value);
-            var dataStr = $("#add_report_client_form").serialize();
-            var rootpath='<?php echo $this->webroot ?>';
-	    document.getElementById('loader').innerHTML='<img src="<?php echo $this->webroot; ?>img/ajax-loader.gif" />';	
-              $.ajax({
-			  type: "POST",
-			  url: rootpath+"Reports/hsseclientprocess/",
-			  data:"data="+dataStr+"&well="+well+"&rig="+rig+"&report_id="+report_id+"&clientncr="+clientncr+"&clientreviewed="+clientreviewed+"&clientreviewer="+clientreviewer+"&wellsiterep="+wellsiterep,
-			  success: function(res)
-			  {
-			   if(res=='fail'){
-				   document.getElementById('loader').innerHTML='<font color="red">Please try again</font>';  
-	                     }else if(res=='add'){
-				   document.getElementById('loader').innerHTML='<font color="green">Client Data Added Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/add_report_client/<?php echo base64_encode($report_id); ?>';
-			     }else if(res=='update'){
-				   document.getElementById('loader').innerHTML='<font color="green">Client Data Update Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/add_report_client/<?php echo base64_encode($report_id); ?>';
-				   
-                             }
-                             
-                 }
-		 
-	});
 	
-
+    var well = jQuery.trim(document.getElementById('well').value);
+	var rig = jQuery.trim(document.getElementById('rig').value);
+	var report_id ='<?php echo $report_id;?>';
+	var clientncr = jQuery.trim(document.getElementById('clientncr').value);
+		var clientreviewed= jQuery.trim(document.getElementById('clientreviewed').value);
+	if(clientreviewed==3){
+		var clientreviewer = jQuery.trim(document.getElementById('clientreviewer').value);
+		if(clientreviewer==''){
+			document.getElementById('client_reviewer_error').innerHTML='Please Enter Client Reviewer';
+			return false;
+		}else{
+			document.getElementById('client_reviewer_error').innerHTML='';
+		}
+	}
+	   
+	var wellsiterep = jQuery.trim(document.getElementById('wellsiterep').value);
+	var dataStr = $("#add_report_client_form").serialize();
+	var rootpath='<?php echo $webroot ?>';
+	document.getElementById('loader').innerHTML='<img src="<?php echo $webroot; ?>img/ajax-loader.gif" />';	
+	$.ajax({
+		type: "POST",
+		url: rootpath+"Reports/hsseclientprocess/",
+		data:"data="+dataStr+"&well="+well+"&rig="+rig+"&report_id="+report_id+"&clientncr="+clientncr+"&clientreviewed="+clientreviewed+"&clientreviewer="+clientreviewer+"&wellsiterep="+wellsiterep,
+		success: function(res)
+		{
+			if(res=='fail'){
+				document.getElementById('loader').innerHTML='<font color="red">Please try again</font>';  
+			}else if(res=='add'){
+				document.getElementById('loader').innerHTML='<font color="green">Client Data Added Successfully</font>';
+				document.location='<?php echo $webroot; ?>Reports/add_report_client/<?php echo base64_encode($report_id); ?>';
+			}else if(res=='update'){
+				document.getElementById('loader').innerHTML='<font color="green">Client Data Update Successfully</font>';
+				document.location='<?php echo $webroot; ?>Reports/add_report_client/<?php echo base64_encode($report_id); ?>';
+			}
+		}
+	});
 	return false;
- 
 }
 
 

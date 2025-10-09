@@ -1,7 +1,8 @@
+<?php $webroot = $this->request->getAttribute('webroot');?>
 <script language="JavaScript" type="text/javascript">
 var action = "<?php echo $action;?>";
-var path = "<?php echo $this->webroot;?>";
-var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$this->webroot; ?>";
+var path = "<?php echo $webroot;?>";
+var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$webroot; ?>";
 var is_add = "<?php echo $is_add; ?>";
 var is_edit = "<?php echo $is_edit; ?>";
 var is_view = "<?php echo $is_view; ?>";
