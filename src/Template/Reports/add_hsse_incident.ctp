@@ -1,7 +1,7 @@
- <script language="javascript" type="text/javascript">
+<?php $webroot = $this->request->getAttribute('webroot');?>
+<script language="javascript" type="text/javascript">
      
-     
- function isNumberKey(evt)
+    function isNumberKey(evt)
     {
          var charCode = (evt.which) ? evt.which : event.keyCode
          if (charCode > 31 && (charCode < 48 || charCode > 57))
@@ -9,49 +9,40 @@
              return true;
      }	     
  
-
-
-
-function assign_id(type){
-
-  var path=<?php echo $this->webroot; ?>;
-   switch(type){
-	 case'incident_loss':
-	  
-	    var incidentloss=$("#incident_loss").val();
-	     if(incidentloss!=0){
-           document.getElementById('incident_category_section').innerHTML='<span><label>&nbsp;</label><label><img src="<?php echo $this->webroot; ?>img/ajaxloader.gif" /></label></span><div class="clearflds"></div>';
-	       var passurl="incident_loss&id="+incidentloss;
-	     }else if(incidentloss==0){
-	       document.getElementById('incident_category_section').innerHTML='';
-	       document.getElementById('incident_sub_category_section').innerHTML='';
-	       return false;
-	          	 
-	     }
-	 break;
-	 case'incident_category':
-              
-	     var incidentcategory=$("#incident_category").val();
-	     if(incidentcategory!=0){
-	         document.getElementById('incident_sub_category_section').innerHTML='<span><label>&nbsp;</label><label><img src="<?php echo $this->webroot; ?>img/ajaxloader.gif" /></label></span><div class="clearflds"></div>';
-	      var passurl="incident_category&id="+incidentcategory;
-	     }else if(incidentcategory==0){
-	       document.getElementById('incident_sub_category_section').innerHTML='';
-	       return false;
-	     }
-	 break;
-	
-	}
+	function assign_id(type)
+	{
+		var path=<?php echo $webroot; ?>;
+		switch(type){
+			case'incident_loss':
+				var incidentloss=$("#incident_loss").val();
+				if(incidentloss!=0){
+					document.getElementById('incident_category_section').innerHTML='<span><label>&nbsp;</label><label><img src="<?php echo $webroot; ?>img/ajaxloader.gif" /></label></span><div class="clearflds"></div>';
+					var passurl="incident_loss&id="+incidentloss;
+				}else if(incidentloss==0){
+					document.getElementById('incident_category_section').innerHTML='';
+					document.getElementById('incident_sub_category_section').innerHTML='';
+					return false;
+				}
+				break;
+			case'incident_category':
+            var incidentcategory=$("#incident_category").val();
+			if(incidentcategory!=0){
+				document.getElementById('incident_sub_category_section').innerHTML='<span><label>&nbsp;</label><label><img src="<?php echo $webroot; ?>img/ajaxloader.gif" /></label></span><div class="clearflds"></div>';
+				var passurl="incident_category&id="+incidentcategory;
+			}else if(incidentcategory==0){
+				document.getElementById('incident_sub_category_section').innerHTML='';
+				return false;
+			}
+			break;
+		}
 	 
 	    $.ajax({
-			    type: "POST",
-			    url: path+"Reports/displaycontentforloss/",
-			    data:"type="+passurl,
-			    success: function(res)
-			    {
-			      
-						       
-			       	   	var splitvalue=res.split("~");
+			type: "POST",
+			url: path+"Reports/displaycontentforloss/",
+			data:"type="+passurl,
+			success: function(res)
+			{
+			    var splitvalue=res.split("~");
 					switch(splitvalue[0]){
 				     	  case 'incident_loss':
 					  $("#incident_category_section").html(splitvalue[1]);
@@ -101,7 +92,7 @@ function add_incident_client()
 	    
 	    var curdate='<?php echo date('m-d-Y'); ?>';
             var dataStr = $("#add_report_incident_form").serialize();
-            var rootpath='<?php echo $this->webroot ?>';
+            var rootpath='<?php echo $webroot ?>';
 	    if(date_incident!=''){
 	    if(curdate<date_incident){
 	       document.getElementById('date_incident_error').innerHTML='Incident date less than current date';
@@ -116,7 +107,7 @@ function add_incident_client()
 	      return false;
 	    }
 	    
-	    document.getElementById('loader').innerHTML='<img src="<?php echo $this->webroot; ?>img/loader.gif" />';	
+	    document.getElementById('loader').innerHTML='<img src="<?php echo $webroot; ?>img/loader.gif" />';	
               $.ajax({
 			  type: "POST",
 			  url: rootpath+"Reports/hsseincidentprocess/",
@@ -127,10 +118,10 @@ function add_incident_client()
 				   document.getElementById('loader').innerHTML='<font color="red">Please try again</font>';  
 	                     }else if(res=='add'){
 				   document.getElementById('loader').innerHTML='<font color="green">Incident Data Added Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_incident_list/<?php echo base64_encode($report_id); ?>';
+				   document.location='<?php echo $webroot; ?>Reports/report_hsse_incident_list/<?php echo base64_encode($report_id); ?>';
 			     }else if(res=='update'){
 				   document.getElementById('loader').innerHTML='<font color="green">Incident Data Update Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_incident_list/<?php echo base64_encode($report_id); ?>';
+				   document.location='<?php echo $webroot; ?>Reports/report_hsse_incident_list/<?php echo base64_encode($report_id); ?>';
 				   
                              }
                           
@@ -241,7 +232,7 @@ for ($i = 0; $i <= 23; $i++)
 			       <select id="incident_severity" name="incident_severity">
 			     <option value="0">Select One</option>	   
                              <?php for($i=0;$i<count($incidentSeverityDetail);$i++){?>
-			     <option value="<?php echo $incidentSeverityDetail[$i]['IncidentSeverity']['id']; ?>" <?php if($incident_severity==$incidentSeverityDetail[$i]['IncidentSeverity']['id']){echo "selected";}else{} ?>><?php echo $incidentSeverityDetail[$i]['IncidentSeverity']['type']; ?></option>
+			     <option value="<?php echo $incidentSeverityDetail[$i]['id']; ?>" <?php if($incident_severity==$incidentSeverityDetail[$i]['id']){echo "selected";}else{} ?>><?php echo $incidentSeverityDetail[$i]['type']; ?></option>
 			     <?php } ?>
 			     </select>
 		        
@@ -258,7 +249,7 @@ for ($i = 0; $i <= 23; $i++)
 			   <select id="incident_loss" name="incident_loss" onchange="assign_id('incident_loss');">	
                              <option value="0">Select One</option>
 			     <?php for($i=0;$i<count($incidentLossDetail);$i++){?>
-			     <option value="<?php echo $incidentLossDetail[$i]['Loss']['id']; ?>" <?php if($incident_loss==$incidentLossDetail[$i]['Loss']['id']){echo "selected";}else{} ?>><?php echo $incidentLossDetail[$i]['Loss']['type']; ?></option>
+			     <option value="<?php echo $incidentLossDetail[$i]['id']; ?>" <?php if($incident_loss==$incidentLossDetail[$i]['id']){echo "selected";}else{} ?>><?php echo $incidentLossDetail[$i]['type']; ?></option>
 			     <?php } ?>
 			     </select>
 			    </span>

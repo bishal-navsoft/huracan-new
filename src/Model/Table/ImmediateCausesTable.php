@@ -3,7 +3,7 @@ namespace App\Model\Table;
 
 use Cake\ORM\Table;
 
-class ImmediateCauses extends Table
+class ImmediateCausesTable extends Table
 {
     public function initialize(array $config): void
     {

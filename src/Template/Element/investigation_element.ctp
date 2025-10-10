@@ -165,15 +165,7 @@
 	    	document.getElementById(textareid).value=summary_holder;
 	  	}
 	}
- 
- 
- 
- 
- 
- 
- 
- 
- </script>
+</script>
  
     <div class="sub_contentwrap fixreport_table" >
 	  <table width="100%" border="0" cellspacing="1" cellpadding="0" class="reporttable" >
@@ -185,14 +177,14 @@
      </div>
     <div class="looptable_panel">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" >
-      <tr>
+	<tr>
         <td align="left" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0"  class="dyntable">
           <tr>
             <td width="31%" align="left" valign="middle">
 	       <select id="personal_data" name="personal_data" >
                  <option value="0">Select One</option>	  
 		    <?php for($i=0;$i<count($userDetail);$i++){?>
-		    <option value="<?php echo $userDetail[$i]['AdminMaster']['position_seniorty']; ?>"><?php echo $userDetail[$i]['AdminMaster']['first_name']." ".$userDetail[$i]['AdminMaster']['last_name']; ?></option>
+		    <option value="<?php echo $userDetail[$i]['position_seniorty']; ?>"><?php echo $userDetail[$i]['first_name']." ".$userDetail[$i]['last_name']; ?></option>
 		    <?php } ?>
               </select>
 	    </td>

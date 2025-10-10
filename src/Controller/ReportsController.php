@@ -34,9 +34,13 @@ class ReportsController extends AppController
         $this->loadModel("Potential");
         $this->loadModel("Country");
         $this->loadModel("HsseClient");
+        $this->loadModel("HsseIncident");
         $this->loadModel("ImmediateCauses");
         $this->loadModel("Losses");
         $this->loadModel("HsseInvestigations");
+        $this->loadModel("HssePersonnel");
+        $this->loadModel("IncidentCategory");
+        $this->loadModel("IncidentSubCategory");
         $this->viewBuilder()->setLayout("after_adminlogin_template");
     }
 
@@ -896,37 +900,29 @@ class ReportsController extends AppController
         }
     }
 
-    function hsseclientprocess()
+    public function hsseclientprocess()
     {
-        $this->layout = "ajax";
+        $data = $this->request->getData();
+        $this->viewBuilder()->setLayout('ajax'); // CakePHP 3.x way
         $this->_checkAdminSession();
-        $hsseClientData = [];
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => $this->data["report_id"],
-            ],
-        ]);
-        if (count($clientdetail) > 0) {
-            $res = "update";
-            $hsseClientData["HsseClient"]["id"] =
-                $clientdetail[0]["HsseClient"]["id"];
+
+        $hsseClientData = null;
+        $clientdetail = $this->HsseClient->find('all', [
+            'conditions' => [
+                'HsseClient.report_id' => $data['report_id'],
+            ]
+        ])->first();
+        if ($clientdetail) {
+            $res = 'update';
+            $hsseClientData = $this->HsseClient->patchEntity($clientdetail, $data);
         } else {
-            $res = "add";
+            $res = 'add';
+            $hsseClientData = $this->HsseClient->newEntity($data);
         }
-        $hsseClientData["HsseClient"]["well"] = $this->data["well"];
-        $hsseClientData["HsseClient"]["rig"] = $this->data["rig"];
-        $hsseClientData["HsseClient"]["clientncr"] = $this->data["clientncr"];
-        $hsseClientData["HsseClient"]["clientreviewed"] =
-            $this->data["clientreviewed"];
-        $hsseClientData["HsseClient"]["report_id"] = $this->data["report_id"];
-        $hsseClientData["HsseClient"]["clientreviewer"] =
-            $this->data["clientreviewer"];
-        $hsseClientData["HsseClient"]["wellsiterep"] =
-            $this->data["wellsiterep"];
         if ($this->HsseClient->save($hsseClientData)) {
             echo $res;
         } else {
-            echo "fail";
+            echo 'fail';
         }
         exit();
     }
@@ -1216,9 +1212,9 @@ class ReportsController extends AppController
                     $incidentdetailHolder[$i]["incident_severity"] = "";
                 }
                 if ($incidentdetail[$i]["HsseIncident"]["incident_loss"] != 0) {
-                    $incidentLoss_type = $this->Loss->find("all", [
+                    $incidentLoss_type = $this->Losses->find("all", [
                         "conditions" => [
-                            "Loss.id" =>
+                            "Losses.id" =>
                                 $incidentdetail[$i]["HsseIncident"][
                                     "incident_loss"
                                 ],
@@ -1672,7 +1668,7 @@ class ReportsController extends AppController
                 $incidentInvestigationDetail[$i]["HsseInvestigationData"][
                     "incident_summary"
                 ] = $incidentDetail[0]["HsseIncident"]["incident_summary"];
-                $lossDetail = $this->Loss->find("all", [
+                $lossDetail = $this->Losses->find("all", [
                     "conditions" => [
                         "id" =>
                             $incidentDetail[0]["HsseIncident"]["incident_loss"],
@@ -1843,7 +1839,7 @@ class ReportsController extends AppController
         }
     }
 
-    function add_report_personal($report_id = null, $personel_id = null)
+    /*function add_report_personal($report_id = null, $personel_id = null)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
@@ -1951,73 +1947,159 @@ class ReportsController extends AppController
             $this->set("snr", "");
             $this->set("styledisplay", 'style="display:none"');
         }
+    }*/
+    public function addReportPersonal($report_id = null, $personnel_id = null)
+    {
+        $this->_checkAdminSession();
+        $this->_getRoleMenuPermission();
+        $this->grid_access();
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
+
+        $this->set('id', 0);
+
+        // Get active users
+        $userDetails = $this->AdminMasters->find()
+            ->where(['AdminMasters.isdeleted' => 'N', 'AdminMasters.isblocked' => 'N'])
+            ->contain(['RoleMasters'])
+            ->all();
+
+        foreach ($userDetails as $user) {
+            $modifiedDate = $user->modified;
+            $user->user_seniority = $modifiedDate->format('d/m/Y');
+            $user->position_seniority = $user->role_master->role_name . "~" . $user->user_seniority . "~" . $user->id;
+        }
+        
+        if(count($userDetails->toArray()) > 0){
+            $userDetailsarr =$userDetails->toArray();
+        }else{
+            $userDetailsarr = [];
+        }
+        $this->set('userDetail', $userDetailsarr);
+        
+        // Get report detail
+        $reportDetail = $this->Reports->get(base64_decode($report_id));
+        $this->set('report_number', $reportDetail->report_no);
+
+        // Get client feedback
+        $clientDetail = $this->HsseClient->find()
+            ->where(['report_id' => base64_decode($report_id)])
+            ->first();
+
+        if ($clientDetail) {
+            $this->set('client_feedback', $clientDetail->clientreviewed == 3 ? 1 : 0);
+        } else {
+            $this->set('client_feedback', 0);
+        }
+
+        // Edit or Add personnel
+        if ($personnel_id) {
+            $personnelDetail = $this->HssePersonnel->get(base64_decode($personnel_id));
+            $personalInfo = $this->AdminMasters->get($personnelDetail->personal_data, ['contain' => ['RoleMasters']]);
+
+            $this->set([
+                'heading' => 'Update Personal Data',
+                'button' => 'Update',
+                'id' => $personnelDetail->id,
+                'pid' => $personnelDetail->personal_data,
+                'report_id' => $personnelDetail->report_id,
+                'time_last_sleep' => $personnelDetail->last_sleep,
+                'time_since_sleep' => $personnelDetail->since_sleep,
+                'person' => $personnelDetail->personal_data,
+                'roll_name' => $personalInfo->role_master->role_name,
+                'snr' => $personalInfo->modified->format('d/m/Y'),
+                'styledisplay' => 'style="display:block"'
+            ]);
+        } else {
+            $this->set([
+                'heading' => 'Add Personal Data',
+                'button' => 'Submit',
+                'id' => 0,
+                'pid' => 0,
+                'report_id' => base64_decode($report_id),
+                'time_last_sleep' => '',
+                'time_since_sleep' => '',
+                'person' => '',
+                'roll_name' => '',
+                'snr' => '',
+                'styledisplay' => 'style="display:none"'
+            ]);
+        }
     }
 
-    function hssepersonnelprocess()
+    public function hssepersonnelprocess()
     {
-        $this->layout = "ajax";
-        $personnelArray = [];
-        $personalid = explode("~", $this->data["personal_data"]);
-        $pid = $this->data["add_report_personnel_form"]["pid"];
+        $this->autoRender = false;
+        $this->viewBuilder()->setLayout('ajax'); // CakePHP 3.x layout
+        $data = $this->request->getData();
+        if (!isset($data['personal_data'])) {
+            echo 'fail';
+            return;
+        }
+        $personalid = explode("~", $data["personal_data"]);
         $res = "";
-        if ($this->data["add_report_personnel_form"]["id"] != 0) {
-            if ($pid == $personalid[2]) {
-                $personnelArray["HssePersonnel"]["id"] =
-                    $this->data["add_report_personnel_form"]["id"];
-                $personnelArray["HssePersonnel"]["personal_data"] =
-                    $personalid[2];
-                $res = "update";
-            } elseif ($pid != $personalid[2]) {
-                $personneldetail = $this->HssePersonnel->find("all", [
-                    "conditions" => [
-                        "HssePersonnel.personal_data" => $personalid[2],
-                        "HssePersonnel.report_id" => $this->data["report_id"],
-                    ],
+        // Check if updating existing record
+        if (!empty($data["id"]) && $data["id"] != 0) {
+            $existing = $this->HssePersonnel->get($data["id"]);
+            
+            if ($data["pid"] == $personalid[2]) {
+                $entity = $this->HssePersonnel->patchEntity($existing, [
+                    'personal_data' => $personalid[2],
+                    'last_sleep' => $data['last_sleep'] ?? null,
+                    'since_sleep' => $data['since_sleep'] ?? null,
+                    'report_id' => $data['report_id'] ?? null
                 ]);
+                $res = "update";
+            } else {
+                // Check if another record exists with the same personal_data
+                $personneldetail = $this->HssePersonnel->find()
+                    ->where([
+                        'personal_data' => $personalid[2],
+                        'report_id' => $data['report_id']
+                    ])
+                    ->first();
 
-                if (count($personneldetail) > 0) {
-                    echo $res = "avl";
-                    exit();
+                if ($personneldetail) {
+                    echo "avl";
+                    return;
                 } else {
-                    $personnelArray["HssePersonnel"]["id"] =
-                        $this->data["add_report_personnel_form"]["id"];
-                    $personnelArray["HssePersonnel"]["personal_data"] =
-                        $personalid[2];
+                    $entity = $this->HssePersonnel->patchEntity($existing, [
+                        'personal_data' => $personalid[2],
+                        'last_sleep' => $data['last_sleep'] ?? null,
+                        'since_sleep' => $data['since_sleep'] ?? null,
+                        'report_id' => $data['report_id'] ?? null
+                    ]);
                     $res = "update";
                 }
             }
         } else {
-            $personneldetail = $this->HssePersonnel->find("all", [
-                "conditions" => [
-                    "HssePersonnel.report_id" => $this->data["report_id"],
-                    "HssePersonnel.personal_data" => $personalid[2],
-                ],
-            ]);
+            // New record
+            $personneldetail = $this->HssePersonnel->find()
+                ->where([
+                    'personal_data' => $personalid[2],
+                    'report_id' => $data['report_id']
+                ])
+                ->first();
 
-            if (count($personneldetail) > 0) {
-                echo $res = "avl";
-                exit();
+            if ($personneldetail) {
+                echo "avl";
+                return;
             } else {
-                $personnelArray["HssePersonnel"]["personal_data"] =
-                    $personalid[2];
+                $entity = $this->HssePersonnel->newEntity([
+                    'personal_data' => $personalid[2],
+                    'last_sleep' => $data['last_sleep'] ?? null,
+                    'since_sleep' => $data['since_sleep'] ?? null,
+                    'report_id' => $data['report_id'] ?? null
+                ]);
                 $res = "add";
             }
         }
 
-        $personnelArray["HssePersonnel"]["last_sleep"] =
-            $this->data["last_sleep"];
-        $personnelArray["HssePersonnel"]["report_id"] =
-            $this->data["report_id"];
-
-        $personnelArray["HssePersonnel"]["since_sleep"] =
-            $this->data["since_sleep"];
-        if ($this->HssePersonnel->save($personnelArray)) {
+        // Save entity
+        if ($this->HssePersonnel->save($entity)) {
             echo $res;
         } else {
             echo "fail";
         }
-
-        exit();
     }
 
     public function reportHssePerssonelList($id = null)
@@ -2025,9 +2107,7 @@ class ReportsController extends AppController
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
         $this->grid_access();
-
         $this->viewBuilder()->setLayout('after_adminlogin_template');
-
         $decodedId = base64_decode($id);
 
         // Fetch the report details safely
@@ -2080,7 +2160,7 @@ class ReportsController extends AppController
         $session->delete('value');
     }
 
-    public function get_all_personnel_list($report_id)
+    /*public function get_all_personnel_list($report_id)
     {
         Configure::write("debug", "2");
         $this->layout = "ajax";
@@ -2175,59 +2255,141 @@ class ReportsController extends AppController
         $this->set("total", $count); //send total to the view
         $this->set("admins", $adminArray); //send products to the view
         //$this->set('status', $action);
-    }
-
-    function personnel_block($id = null)
+    }*/
+    public function getAllPersonnelList($report_id)
     {
-        if (!$id) {
-            $this->redirect(
-                ["action" => report_hsse_incident_list],
-                null,
-                true
-            );
-        } else {
-            $idArray = explode("^", $id);
-            foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HssePersonnel"]["id"] = $id;
-                $this->request->data["HssePersonnel"]["isblocked"] = "Y";
-                $this->HssePersonnel->save($this->request->data, false);
+        $this->request->allowMethod(['get', 'post']);
+        $this->_checkAdminSession();
+        $reportId = (int)$report_id;
+        $query = $this->HssePersonnel->find()
+            ->where([
+                'report_id' => $reportId,
+                'HssePersonnel.isdeleted' => 'N'
+            ])
+            ->contain(['AdminMasters.RoleMasters'])
+            ->order(['HssePersonnel.id' => 'DESC']);
+
+        // Filter by name if provided
+        if (!empty($this->request->getQuery('filter')) && $this->request->getQuery('filter') === 'name') {
+            $value = $this->request->getQuery('value');
+            if ($value) {
+                $names = explode(' ', $value);
+                $firstName = $names[0];
+                $lastName = end($names);
+
+                $query = $query->matching('AdminMaster', function ($q) use ($firstName, $lastName) {
+                    return $q->where([
+                        'AdminMaster.first_name LIKE' => "%$firstName%",
+                        'AdminMaster.last_name LIKE' => "%$lastName%"
+                    ]);
+                });
             }
-            exit();
         }
+
+        // Handle pagination / limit
+        $start = $this->request->getQuery('start') ?? 0;
+        $limit = $this->request->getQuery('limit') ?? null;
+        if ($limit !== 'all') {
+            $query = $query->offset((int)$start)->limit((int)$limit);
+        }
+
+        $personnelList = $query->all();
+
+        $adminArray = [];
+        foreach ($personnelList as $person) {
+            $isBlocked = $person->isblocked === 'N';
+            $seniority = $person->admin_master->modified->format('d/m/Y');
+
+            $adminArray[] = [
+                'id' => $person->id,
+                'personal_data' => $person->personal_data,
+                'report_id' => $person->report_id,
+                'last_sleep' => $person->last_sleep,
+                'since_sleep' => $person->since_sleep,
+                'blockHideIndex' => $isBlocked ? 'true' : 'false',
+                'unblockHideIndex' => $isBlocked ? 'false' : 'true',
+                'isdeletdHideIndex' => $isBlocked ? 'true' : 'false',
+                'name' => $person->admin_master->first_name . ' ' . $person->admin_master->last_name,
+                'seniority' => $seniority,
+                'position' => $person->admin_master->role_master->role_name ?? ''
+            ];
+        }
+
+        $response = [
+            'total' => $personnelList->count(),
+            'admins' => $adminArray
+        ];
+
+        // Return JSON for AJAX
+        $this->response = $this->response->withType('application/json')
+                                        ->withStringBody(json_encode($response));
+        return $this->response;
     }
 
-    function personnel_unblock($id = null)
+    public function personnel_block($id = null)
     {
+        $this->request->allowMethod(['post', 'get']);
+        $this->viewBuilder()->setLayout('ajax');
+
         if (!$id) {
-            $this->redirect(["action" => admin], null, true);
-        } else {
-            $idArray = explode("^", $id);
-            foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HssePersonnel"]["id"] = $id;
-                $this->request->data["HssePersonnel"]["isblocked"] = "N";
-                $this->HssePersonnel->save($this->request->data, false);
-            }
-            exit();
+            $this->set(['status' => 'error', 'message' => 'Invalid personnel ID', '_serialize' => ['status', 'message']]);
+            return;
         }
+
+        $idArray = explode("^", $id);
+        foreach ($idArray as $personnelId) {
+            $personnel = $this->HssePersonnel->get($personnelId);
+            $personnel->isblocked = 'Y';
+            $this->HssePersonnel->save($personnel);
+        }
+
+        $this->set(['status' => 'ok', '_serialize' => ['status']]);
     }
 
-    function personnel_delete()
+    public function personnel_unblock($id = null)
     {
-        $this->layout = "ajax";
-        if ($this->data["id"] != "") {
-            $idArray = explode("^", $this->data["id"]);
+        $this->request->allowMethod(['post', 'get']); // Allow GET/POST if needed
+        $this->viewBuilder()->setLayout('ajax'); // For AJAX requests
+
+        if (!$id) {
+            $this->set('status', 'error');
+            $this->set('message', 'Invalid personnel ID');
+            $this->set('_serialize', ['status', 'message']);
+            return;
+        }
+
+        $idArray = explode("^", $id);
+
+        foreach ($idArray as $personnelId) {
+            $personnel = $this->HssePersonnel->get($personnelId);
+            $personnel->isblocked = 'N';
+            $this->HssePersonnel->save($personnel);
+        }
+
+        $this->set('status', 'ok');
+        $this->set('_serialize', ['status']);
+    }
+
+    public function personnelDelete()
+    {
+        $this->autoRender = false; // no view
+        $this->request->allowMethod(['post']); // allow only POST for CSRF protection
+
+        $idData = $this->request->getData('id'); // get POSTed 'id'
+        
+        if (!empty($idData)) {
+            $idArray = explode("^", $idData);
             foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HssePersonnel"]["id"] = $id;
-                $this->request->data["HssePersonnel"]["isdeleted"] = "Y";
-                $this->HssePersonnel->save($this->request->data, false);
+                $personnel = $this->HssePersonnel->get($id);
+                $personnel = $this->HssePersonnel->patchEntity($personnel, [
+                    'isdeleted' => 'Y'
+                ]);
+                $this->HssePersonnel->save($personnel);
             }
             echo "ok";
-            exit();
+            return;
         } else {
-            $this->redirect(["action" => report_hsse_list], null, true);
+            return $this->redirect(['action' => 'reportHsseList']);
         }
     }
 
@@ -2360,9 +2522,9 @@ class ReportsController extends AppController
                 $adminArray[$i]["incident_severity_type"] = "";
             }
             if ($adminArray[$i]["incident_loss"] != 0) {
-                $incidentLoss_type = $this->Loss->find("all", [
+                $incidentLoss_type = $this->Losses->find("all", [
                     "conditions" => [
-                        "Loss.id" => $adminArray[$i]["incident_loss"],
+                        "Losses.id" => $adminArray[$i]["incident_loss"],
                     ],
                 ]);
                 $adminArray[$i]["incident_loss_type"] =
@@ -2458,7 +2620,7 @@ class ReportsController extends AppController
         }
     }
 
-    function add_hsse_incident($reoprt_id = null, $incident_id = null)
+    /*function add_hsse_incident($reoprt_id = null, $incident_id = null)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
@@ -2651,84 +2813,197 @@ class ReportsController extends AppController
             $this->set("detail", "");
             $this->set("time_incident", "");
         }
+    }*/
+    public function addHsseIncident($report_id = null, $incident_id = null)
+    {
+        $this->_checkAdminSession();
+        $this->_getRoleMenuPermission();
+        $this->grid_access();
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
+
+        $decodedReportId = base64_decode($report_id);
+        $decodedIncidentId = $incident_id ? base64_decode($incident_id) : null;
+
+        // Fetch severity and loss details
+        $incidentSeverityDetail = $this->IncidentSeverity->find()
+            ->where(['IncidentSeverity.servrity_type' => 'ssh'])
+            ->all();
+        $incidentSeverityDetailarr = $incidentSeverityDetail->toArray();
+        $incidentLossDetail = $this->Losses->find()->all();
+        $incidentLossDetailarr = $incidentLossDetail->toArray();
+        $this->set(['incidentSeverityDetail'=>$incidentSeverityDetailarr, 'incidentLossDetail'=>$incidentLossDetailarr]);
+
+        // Fetch report details
+        $reportDetail = $this->Reports->find()
+            ->where(['Reports.id' => $decodedReportId])
+            ->first();
+
+        if (!$reportDetail) {
+            $this->Flash->error(__('Invalid report.'));
+            return $this->redirect(['controller' => 'Reports', 'action' => 'index']);
+        }
+
+        // Client detail
+        $clientDetail = $this->HsseClient->find()
+            ->where(['HsseClient.report_id' => $reportDetail->id])
+            ->first();
+
+        $clientFeedback = ($clientDetail && $clientDetail->clientreviewed == 3) ? 1 : 0;
+        $this->set('client_feedback', $clientFeedback);
+        $this->set('report_number', $reportDetail->report_no);
+
+        // Incident detail
+        $incidentDetail = null;
+        if ($decodedIncidentId) {
+            $incidentDetail = $this->HsseIncident->find()
+                ->where(['HsseIncident.id' => $decodedIncidentId])
+                ->first();
+        }
+
+        // If editing an incident
+        if ($incidentDetail) {
+            $incidentLoss = $incidentDetail->incident_loss ?? 0;
+            $incidentCategory = $incidentDetail->incident_category ?? '';
+            $incidentSubCategory = $incidentDetail->incident_sub_category ?? '';
+
+            $incidentCategoryDetail = [];
+            $incidentSubCategoryDetail = [];
+
+            if ($incidentLoss != 0) {
+                $incidentCategoryDetail = $this->IncidentCategory->find()
+                    ->where(['IncidentCategory.loss_id' => $incidentLoss])
+                    ->all();
+
+                if (!$incidentCategoryDetail->isEmpty()) {
+                    $firstCategory = $incidentCategoryDetail->first();
+                    $incidentSubCategoryDetail = $this->IncidentSubCategory->find()
+                        ->where(['IncidentSubCategory.loss_id' => $firstCategory->id])
+                        ->all();
+                }
+            }
+
+            $dateIncident = '';
+            if (!empty($incidentDetail->date_incident)) {
+                $dateParts = explode('-', $incidentDetail->date_incident);
+                if (count($dateParts) === 3) {
+                    $dateIncident = $dateParts[1] . '-' . $dateParts[2] . '-' . $dateParts[0];
+                }
+            }
+
+            $this->set([
+                'incident_loss' => $incidentLoss,
+                'incident_category' => $incidentCategory,
+                'incident_sub_category' => $incidentSubCategory,
+                'incidentCategoryDetail' => $incidentCategoryDetail,
+                'incidentSubCategoryDetail' => $incidentSubCategoryDetail,
+                'date_incident' => $dateIncident,
+                'time_incident' => $incidentDetail->incident_time ?? '',
+                'incident_summary' => $incidentDetail->incident_summary ?? '',
+                'report_id' => $incidentDetail->report_id ?? '',
+                'detail' => $incidentDetail->detail ?? '',
+                'heading' => 'Edit Incident Data',
+                'button' => 'Update',
+                'incident_id' => $decodedIncidentId,
+                'incident_severity' => $incidentDetail->incident_severity ?? '',
+                'incident_no' => $incidentDetail->incident_no ?? ''
+            ]);
+        } else {
+            // Add mode
+            $firstLoss = $incidentLossDetail->first();
+            $incidentCategoryDetail = $firstLoss
+                ? $this->IncidentCategory->find()->where(['IncidentCategory.loss_id' => $firstLoss->id])->all()
+                : [];
+
+            $firstCategory = !$incidentCategoryDetail->isEmpty() ? $incidentCategoryDetail->first() : null;
+
+            $incidentSubCategoryDetail = $firstCategory
+                ? $this->IncidentSubCategory->find()->where(['IncidentSubCategory.loss_category_id' => $firstCategory->id])->all()
+                : [];
+
+            $existingIncidents = $this->HsseIncident->find()
+                ->where(['HsseIncident.report_id' => $decodedReportId])
+                ->count();
+
+            $incident_no = $existingIncidents + 1;
+
+            $this->set([
+                'incidentCategoryDetail' => $incidentCategoryDetail,
+                'incidentSubCategoryDetail' => $incidentSubCategoryDetail,
+                'heading' => 'Add Incident Data',
+                'button' => 'Submit',
+                'incident_id' => 0,
+                'incident_no' => $incident_no,
+                'report_id' => $decodedReportId,
+                'incident_severity' => '',
+                'date_incident' => '',
+                'incident_category' => '',
+                'incident_sub_category' => '',
+                'incident_loss' => '',
+                'incident_summary' => '',
+                'detail' => '',
+                'time_incident' => ''
+            ]);
+        }
     }
 
-    function hsseincidentprocess()
+    
+    public function hsseincidentprocess()
     {
-        $this->layout = "ajax";
-        $identArray = [];
+        $this->viewBuilder()->setLayout('ajax');
+        $this->autoRender = false; // prevent rendering a view
+        $this->loadModel('HsseIncident');
 
-        $incidentdetail = $this->HsseIncident->find("all", [
-            "conditions" => [
-                "HsseIncident.report_id" => $this->data["report_id"],
-            ],
-        ]);
-        if ($this->data["add_report_incident_form"]["id"] != 0) {
-            $res = "update";
-            $incidentArray["HsseIncident"]["id"] =
-                $this->data["add_report_incident_form"]["id"];
+        $data = $this->request->getData();
+        $res = 'add';
+
+        // Check if updating an existing incident
+        if (!empty($data['add_report_incident_form']['id']) && $data['add_report_incident_form']['id'] != 0) {
+            $res = 'update';
+            $incident = $this->HsseIncident->get($data['add_report_incident_form']['id']);
         } else {
-            $res = "add";
-        }
-        $incidentArray["HsseIncident"]["incident_time"] =
-            $this->data["incident_time"];
-        if ($this->data["date_incident"] != "") {
-            $dateIncident = explode("-", $this->data["date_incident"]);
-            $incidentArray["HsseIncident"]["date_incident"] =
-                $dateIncident[2] .
-                "-" .
-                $dateIncident[0] .
-                "-" .
-                $dateIncident[1];
-        } else {
-            $incidentArray["HsseIncident"]["date_incident"] = "";
-        }
-        if ($this->data["incident_severity"] != 0) {
-            $incidentArray["HsseIncident"]["incident_severity"] =
-                $this->data["incident_severity"];
-        } else {
-            $incidentArray["HsseIncident"]["incident_severity"] = 0;
-        }
-        $incidentArray["HsseIncident"]["incident_loss"] =
-            $this->data["incident_loss"];
-        if (isset($this->data["incident_category"])) {
-            $incidentArray["HsseIncident"]["incident_category"] =
-                $this->data["incident_category"];
-        } else {
-            $incidentArray["HsseIncident"]["incident_category"] = 0;
-        }
-        if (isset($this->data["incident_sub_category"])) {
-            $incidentArray["HsseIncident"]["incident_sub_category"] =
-                $this->data["incident_sub_category"];
-        } else {
-            $incidentArray["HsseIncident"]["incident_sub_category"] = 0;
+            $incident = $this->HsseIncident->newEmptyEntity();
         }
 
-        $incidentArray["HsseIncident"]["incident_summary"] =
-            $this->data["incident_summary"];
-        $incidentArray["HsseIncident"]["report_id"] = $this->data["report_id"];
-        if ($this->data["detail"] != "") {
-            $incidentArray["HsseIncident"]["detail"] = $this->data["detail"];
-        } else {
-            $incidentArray["HsseIncident"]["detail"] = "";
-        }
-        if ($this->data["incident_summary"] != "") {
-            $incidentArray["HsseIncident"]["incident_summary"] =
-                $this->data["incident_summary"];
-        } else {
-            $incidentArray["HsseIncident"]["incident_summary"] = "";
-        }
-        $incidentArray["HsseIncident"]["incident_no"] =
-            $this->data["incident_no"];
+        // Prepare incident data
+        $incidentData = [
+            'incident_time'       => $data['incident_time'] ?? '',
+            'incident_loss'       => $data['incident_loss'] ?? '',
+            'incident_no'         => $data['incident_no'] ?? '',
+            'incident_summary'    => $data['incident_summary'] ?? '',
+            'detail'              => $data['detail'] ?? '',
+            'report_id'           => $data['report_id'] ?? null,
+            'incident_category'   => $data['incident_category'] ?? 0,
+            'incident_sub_category' => $data['incident_sub_category'] ?? 0,
+            'incident_severity'   => $data['incident_severity'] ?? 0,
+        ];
 
-        if ($this->HsseIncident->save($incidentArray)) {
+        // Format date if provided
+        if (!empty($data['date_incident'])) {
+            $dateIncidentParts = explode('-', $data['date_incident']);
+            if (count($dateIncidentParts) === 3) {
+                $incidentData['date_incident'] = sprintf(
+                    '%04d-%02d-%02d',
+                    $dateIncidentParts[2],
+                    $dateIncidentParts[0],
+                    $dateIncidentParts[1]
+                );
+            }
+        } else {
+            $incidentData['date_incident'] = null;
+        }
+
+        // Patch and save
+        $incident = $this->HsseIncident->patchEntity($incident, $incidentData);
+
+        if ($this->HsseIncident->save($incident)) {
             echo $res;
         } else {
-            echo "fail";
+            echo 'fail';
         }
 
-        exit();
+        return;
     }
+
 
     function displaycontentforloss()
     {
@@ -2773,82 +3048,87 @@ class ReportsController extends AppController
         }
     }
 
-    function add_hsse_attachment($reoprt_id = null, $attachment_id = null)
+    public function addHsseAttachment($report_id = null, $attachment_id = null)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
         $this->grid_access();
-        $this->layout = "after_adminlogin_template";
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
 
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => base64_decode($reoprt_id),
-            ],
-        ]);
-        $reportList = $this->Report->find("all", [
-            "conditions" => ["Report.isdeleted" => "N"],
-        ]);
-        $this->set("reportList", $reportList);
+        $reportIdDecoded = base64_decode($report_id);
 
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
+        // Get client details
+        $clientdetail = $this->HsseClient->find()
+            ->where(['HsseClient.report_id' => $reportIdDecoded])
+            ->all();
+
+        // Get all reports
+        $reportList = $this->Reports->find()
+            ->where(['Reports.isdeleted' => 'N'])
+            ->all();
+        $this->set('reportList', $reportList);
+
+        // Set client feedback
+        if (!$clientdetail->isEmpty()) {
+            $clientReviewed = $clientdetail->first()->clientreviewed ?? 0;
+            $this->set('client_feedback', ($clientReviewed == 3) ? 1 : 0);
+        } else {
+            $this->set('client_feedback', 0);
+        }
+
+        // Attachment edit mode
+        if (!empty($attachment_id)) {
+            $attachmentDetail = $this->HsseAttachment->find()
+                ->where(['HsseAttachment.id' => base64_decode($attachment_id)])
+                ->first();
+
+            if ($attachmentDetail) {
+                $imagepath = $this->file_edit_list(
+                    $attachmentDetail->file_name,
+                    'HsseAttachment',
+                    $attachmentDetail
+                );
+
+                $this->set(compact(
+                    'imagepath'
+                ));
+                $this->set([
+                    'heading' => 'Update File',
+                    'attachment_id' => $attachmentDetail->id,
+                    'description' => $attachmentDetail->description,
+                    'button' => 'Update',
+                    'imagename' => $attachmentDetail->file_name,
+                    'attachmentstyle' => 'style="display:block;"'
+                ]);
             }
         } else {
-            $this->set("client_feedback", 0);
-        }
-
-        if ($attachment_id != "") {
-            $attchmentdetail = $this->HsseAttachment->find("all", [
-                "conditions" => [
-                    "HsseAttachment.id" => base64_decode($attachment_id),
-                ],
+            // Add mode
+            $this->set([
+                'ridHolder' => [],
+                'heading' => 'Add attachment',
+                'attachment_id' => 0,
+                'description' => '',
+                'button' => 'Add',
+                'imagepath' => '',
+                'imagename' => '',
+                'attachmentstyle' => 'style="display:none;"',
+                'edit_id' => 0,
+                'id_holder' => 0
             ]);
-
-            $imagepath = $this->file_edit_list(
-                $attchmentdetail[0]["HsseAttachment"]["file_name"],
-                "HsseAttachment",
-                $attchmentdetail
-            );
-
-            $this->set("heading", "Update File");
-            $this->set(
-                "attachment_id",
-                $attchmentdetail[0]["HsseAttachment"]["id"]
-            );
-            $this->set(
-                "description",
-                $attchmentdetail[0]["HsseAttachment"]["description"]
-            );
-            $this->set("button", "Update");
-            $this->set("imagepath", $imagepath);
-            $this->set(
-                "imagename",
-                $attchmentdetail[0]["HsseAttachment"]["file_name"]
-            );
-            $this->set("attachmentstyle", 'style="display:block;"');
-        } else {
-            $this->set("ridHolder", []);
-            $this->set("heading", "Add attachment");
-            $this->set("attachment_id", 0);
-            $this->set("description", "");
-            $this->set("button", "Add");
-            $this->set("imagepath", "");
-            $this->set("imagename", "");
-            $this->set("attachmentstyle", 'style="display:none;"');
-            $this->set("edit_id", 0);
-            $this->set("id_holder", 0);
         }
 
-        $this->set("report_id", base64_decode($reoprt_id));
+        // Set report info
+        $this->set('report_id', $reportIdDecoded);
 
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($reoprt_id)],
-        ]);
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
+        $reportDetail = $this->Reports->find()
+            ->where(['Reports.id' => $reportIdDecoded])
+            ->first();
+
+        if ($reportDetail) {
+            $this->set('report_number', $reportDetail->report_no);
+        }
     }
+
 
     function uploadimage($upparname = null, $deleteImageName = null)
     {
@@ -2890,49 +3170,65 @@ class ReportsController extends AppController
         exit();
     }
 
-    public function report_hsse_attachment_list($id = null)
+    public function reportHsseAttachmentList($id = null)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
         $this->grid_access();
-        $this->layout = "after_adminlogin_template";
 
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($id)],
-        ]);
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => $reportdetail[0]["Report"]["id"],
-            ],
-        ]);
+        // Use modern layout assignment
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
 
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
-            }
-        } else {
-            $this->set("client_feedback", 0);
+        $session = $this->request->getSession();
+        $decodedId = base64_decode($id);
+
+        // Fetch report details
+        $reportdetail = $this->Reports->find()
+            ->where(['Reports.id' => $decodedId])
+            ->first();
+
+        if (!$reportdetail) {
+            $this->Flash->error(__('Invalid Report ID.'));
+            return $this->redirect(['action' => 'index']);
         }
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
-        $this->set("id", base64_decode($id));
-        if (!empty($this->request->data)) {
-            $action = $this->request->data["HsseAttachment"]["action"];
-            $this->set("action", $action);
-            $limit = $this->request->data["HsseAttachment"]["limit"];
-            $this->set("limit", $limit);
-        } else {
-            $action = "all";
-            $this->set("action", "all");
-            $limit = 50;
-            $this->set("limit", $limit);
-        }
-        $this->Session->write("action", $action);
-        $this->Session->write("limit", $limit);
 
-        unset($_SESSION["filter"]);
-        unset($_SESSION["value"]);
+        // Fetch client details
+        $clientdetail = $this->HsseClient->find()
+            ->where(['HsseClient.report_id' => $reportdetail->id])
+            ->all();
+        
+        // Handle client feedback flag
+        $clientFeedback = 0;
+        if (!$clientdetail->isEmpty()) {
+            $client = $clientdetail->first();
+            $clientFeedback = ($client->clientreviewed == 3) ? 1 : 0;
+        }
+        $this->set('client_feedback', $clientFeedback);
+
+        // Set view variables
+        $this->set('report_number', $reportdetail->report_no);
+        $this->set('id', $decodedId);
+
+        // Handle form data
+        $requestData = $this->request->getData();
+
+        if (!empty($requestData)) {
+            $action = $requestData['HsseAttachment']['action'] ?? 'all';
+            $limit  = $requestData['HsseAttachment']['limit'] ?? 50;
+        } else {
+            $action = 'all';
+            $limit  = 50;
+        }
+
+        $this->set(compact('action', 'limit'));
+
+        // Save in session
+        $session->write('action', $action);
+        $session->write('limit', $limit);
+
+        // Clear any old filters
+        $session->delete('filter');
+        $session->delete('value');
     }
 
     public function get_all_attachment_list($report_id)
@@ -3721,50 +4017,6 @@ class ReportsController extends AppController
         exit();
     }
 
-    /*function hsse_remedila_email_list($id = null)
-    {
-        $this->_checkAdminSession();
-        $this->_getRoleMenuPermission();
-        $this->grid_access();
-        $this->layout = "after_adminlogin_template";
-        $this->set("report_no", base64_decode($id));
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($id)],
-        ]);
-        $this->set("id", base64_decode($id));
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => ["HsseClient.report_id" => base64_decode($id)],
-        ]);
-
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
-            }
-        } else {
-            $this->set("client_feedback", 0);
-        }
-
-        $this->set("report_val", $id);
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
-        if (!empty($this->request->data)) {
-            $action = $this->request->data["RemidialEmailList"]["action"];
-            $this->set("action", $action);
-            $limit = $this->request->data["RemidialEmailList"]["limit"];
-            $this->set("limit", $limit);
-        } else {
-            $action = "all";
-            $this->set("action", "all");
-            $limit = 50;
-            $this->set("limit", $limit);
-        }
-        $this->Session->write("action", $action);
-        $this->Session->write("limit", $limit);
-        unset($_SESSION["filter"]);
-        unset($_SESSION["value"]);
-    }*/
-
     public function hsseRemedilaEmailList($id = null)
     {
         $this->_checkAdminSession();
@@ -3776,10 +4028,6 @@ class ReportsController extends AppController
         $decodedId = base64_decode($id);
         $this->set('report_no', $decodedId);
         $this->set('id', $decodedId);
-
-        // Load models explicitly if not already loaded
-        $this->loadModel('Reports');
-        $this->loadModel('HsseClient');
 
         // Fetch report detail
         $reportdetail = $this->Reports->find()
@@ -3988,251 +4236,6 @@ class ReportsController extends AppController
         exit();
     }
 
-    /*function add_hsse_investigation($report_id, $investigation_id = null)
-    {
-        $this->_checkAdminSession();
-        $this->_getRoleMenuPermission();
-        $this->grid_access();
-        $this->layout = "after_adminlogin_template";
-        $immediateCauseDetail = $this->ImmediateCauses->find("all");
-        $user_detail = $this->AdminMaster->find("all", [
-            "conditions" => [
-                "AdminMaster.isdeleted" => "N",
-                "AdminMaster.isblocked" => "N",
-            ],
-        ]);
-        for ($u = 0; $u < count($user_detail); $u++) {
-            $seniority = explode(
-                " ",
-                $user_detail[$u]["AdminMaster"]["modified"]
-            );
-            $snr = explode("-", $seniority[0]);
-            $user_detail[$u]["AdminMaster"]["user_seniority"] =
-                $snr[2] . "/" . $snr[1] . "/" . $snr[0];
-            $user_detail[$u]["AdminMaster"]["position_seniorty"] =
-                $user_detail[$u]["AdminMaster"]["first_name"] .
-                " " .
-                $user_detail[$u]["AdminMaster"]["last_name"] .
-                "~" .
-                $user_detail[$u]["RoleMaster"]["role_name"] .
-                "~" .
-                $user_detail[$u]["AdminMaster"]["user_seniority"] .
-                "~" .
-                $user_detail[$u]["AdminMaster"]["id"] .
-                "~" .
-                $user_detail[$u]["AdminMaster"]["position"];
-        }
-
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => base64_decode($report_id),
-            ],
-        ]);
-
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
-            }
-        } else {
-            $this->set("client_feedback", 0);
-        }
-
-        $this->set("userDetail", $user_detail);
-        $this->set("report_id", base64_decode($report_id));
-
-        $lossDetail = $this->Loss->find("all");
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($report_id)],
-        ]);
-
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
-
-        $investigationdetail = $this->HsseInvestigation->find("all", [
-            "conditions" => ["report_id" => base64_decode($report_id)],
-        ]);
-
-        if (count($investigationdetail) > 0) {
-            $this->set(
-                "investigation_team",
-                explode(
-                    ",",
-                    $investigationdetail[0]["HsseInvestigation"]["team_user_id"]
-                )
-            );
-            $iteam = explode(
-                ",",
-                $investigationdetail[0]["HsseInvestigation"]["team_user_id"]
-            );
-            $investnameHolader = [];
-            for ($i = 0; $i < count($iteam); $i++) {
-                $team_info = $this->AdminMaster->find("all", [
-                    "conditions" => ["AdminMaster.id" => $iteam[$i]],
-                ]);
-                //echo '<pre>';var_dump($team_info); die();
-                $seniorities = explode(
-                    " ",
-                    $team_info[0]["AdminMaster"]["modified"]
-                );
-                $snri = explode("-", $seniorities[0]);
-                $investnameHolader[$i]["id"] =
-                    $team_info[0]["AdminMaster"]["id"];
-                $investnameHolader[$i]["first_name"] =
-                    $team_info[0]["AdminMaster"]["first_name"];
-                $investnameHolader[$i]["last_name"] =
-                    $team_info[0]["AdminMaster"]["last_name"];
-                $investnameHolader[$i]["user_seniority"] =
-                    $snri[2] . "/" . $snri[1] . "/" . $snri[0];
-                $investnameHolader[$i]["role_name"] =
-                    $team_info[0]["RoleMaster"]["role_name"];
-                $investnameHolader[$i]["position_seniorty"] =
-                    $team_info[0]["AdminMaster"]["first_name"] .
-                    " " .
-                    $team_info[0]["AdminMaster"]["last_name"] .
-                    "~" .
-                    $team_info[0]["RoleMaster"]["role_name"] .
-                    "~" .
-                    $investnameHolader[$i]["user_seniority"] .
-                    "~" .
-                    $team_info[0]["AdminMaster"]["id"];
-            }
-            $this->set("investnameHolader", $investnameHolader);
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"]["people_title"] !=
-                ""
-            ) {
-                $this->set(
-                    "epeoplet",
-                    $investigationdetail[0]["HsseInvestigation"]["people_title"]
-                );
-            } else {
-                $this->set("epeoplet", "Enter People Title");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"][
-                    "people_description"
-                ] != ""
-            ) {
-                $this->set(
-                    "epeopled",
-                    $investigationdetail[0]["HsseInvestigation"][
-                        "people_description"
-                    ]
-                );
-            } else {
-                $this->set("epeopled", "Enter People Description");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"][
-                    "position_title"
-                ] != ""
-            ) {
-                $this->set(
-                    "eposplet",
-                    $investigationdetail[0]["HsseInvestigation"][
-                        "position_title"
-                    ]
-                );
-            } else {
-                $this->set("eposplet", "Enter Position Title");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"][
-                    "position_description"
-                ] != ""
-            ) {
-                $this->set(
-                    "epospled",
-                    $investigationdetail[0]["HsseInvestigation"][
-                        "position_description"
-                    ]
-                );
-            } else {
-                $this->set("epospled", "Enter Position Description");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"]["parts_title"] !=
-                ""
-            ) {
-                $this->set(
-                    "epartsplet",
-                    $investigationdetail[0]["HsseInvestigation"]["parts_title"]
-                );
-            } else {
-                $this->set("epartsplet", "Enter Parts Title");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"][
-                    "parts_description"
-                ] != ""
-            ) {
-                $this->set(
-                    "epartspled",
-                    $investigationdetail[0]["HsseInvestigation"][
-                        "parts_description"
-                    ]
-                );
-            } else {
-                $this->set("epartspled", "Enter Parts Description");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"]["paper_title"] !=
-                ""
-            ) {
-                $this->set(
-                    "epapert",
-                    $investigationdetail[0]["HsseInvestigation"]["paper_title"]
-                );
-            } else {
-                $this->set("epapert", "Enter Paper Title");
-            }
-
-            if (
-                $investigationdetail[0]["HsseInvestigation"][
-                    "paper_descrption"
-                ] != ""
-            ) {
-                $this->set(
-                    "epaperd",
-                    $investigationdetail[0]["HsseInvestigation"][
-                        "paper_descrption"
-                    ]
-                );
-            } else {
-                $this->set("epaperd", "Enter Paper Description");
-            }
-
-            $this->set("button", "Update");
-            $this->set(
-                "id_holder",
-                $investigationdetail[0]["HsseInvestigation"]["team_user_id"]
-            );
-        } else {
-            //$this->set('lossDetail',$lossDetail);
-            // $this->set('immediateCauseDetail',$immediateCauseDetail);
-
-            $this->set("button", "Add");
-            $this->set("id_holder", "");
-            $this->set("investigation_team", []);
-            $this->set("investnameHolader", []);
-            $this->set("epeoplet", "Enter People Title");
-            $this->set("epeopled", "Enter People Description");
-            $this->set("eposplet", "Enter Position Title");
-            $this->set("epospled", "Enter Position Description");
-            $this->set("epartsplet", "Enter Parts Title");
-            $this->set("epartspled", "Enter Parts Description");
-            $this->set("epapert", "Enter Paper Title");
-            $this->set("epaperd", "Enter Paper Description");
-        }
-    }*/
     public function addHsseInvestigation($report_id, $investigation_id = null)
     {
         $this->_checkAdminSession();
@@ -4257,7 +4260,7 @@ class ReportsController extends AppController
             ->contain(['RoleMasters'])
             ->where(['AdminMasters.isdeleted' => 'N', 'AdminMasters.isblocked' => 'N'])
             ->all();
-        //dd($user_detail);
+        // dd($user_detail);
         // Build derived seniority and position data
         $userData = [];
         foreach ($user_detail as $u) {
@@ -4279,7 +4282,7 @@ class ReportsController extends AppController
 
             $userData[] = $u;
         }
-
+        // dd($userData);
         $this->set('userDetail', $userData);
 
         /** -----------------------------
@@ -4530,56 +4533,67 @@ class ReportsController extends AppController
         exit();
     }
 
-    function report_hsse_investigation_data_list($report_id)
+    public function reportHsseInvestigationDataList($report_id)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
         $this->grid_access();
-        $this->layout = "after_adminlogin_template";
 
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($report_id)],
-        ]);
-        if ($reportdetail[0]["Report"]["client"] == 9) {
-            $this->set("clienttab", 0);
-        } elseif ($reportdetail[0]["Report"]["client"] != 9) {
-            $this->set("clienttab", 1);
-        }
-        $this->set("report_id", base64_decode($report_id));
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => base64_decode($report_id),
-            ],
-        ]);
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
 
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
-            }
-        } else {
-            $this->set("client_feedback", 0);
+        $decodedId = base64_decode($report_id);
+        $this->set('report_id', $decodedId);
+
+        // Fetch report detail safely
+        $reportdetail = $this->Reports->find()
+            ->where(['Reports.id' => $decodedId])
+            ->first();
+
+        if (!$reportdetail) {
+            $this->Flash->error(__('Invalid report ID.'));
+            return $this->redirect(['action' => 'index']);
         }
-        if (!empty($this->request->data)) {
-            $action = $this->request->data["HsseRemidial"]["action"];
-            $this->set("action", $action);
-            $limit = $this->request->data["HsseRemidial"]["limit"];
-            $this->set("limit", $limit);
+
+        // Set client tab flag
+        $clientTab = ($reportdetail->client == 9) ? 0 : 1;
+        $this->set('clienttab', $clientTab);
+
+        $this->set('report_number', $reportdetail->report_no);
+
+        // Fetch client detail
+        $clientdetail = $this->HsseClient->find()
+            ->where(['HsseClient.report_id' => $decodedId])
+            ->first();
+
+        // Determine client feedback
+        $clientFeedback = ($clientdetail && $clientdetail->clientreviewed == 3) ? 1 : 0;
+        $this->set('client_feedback', $clientFeedback);
+
+        // Handle form data
+        $data = $this->request->getData();
+        if (!empty($data)) {
+            $action = $data['HsseRemidial']['action'] ?? 'all';
+            $limit = $data['HsseRemidial']['limit'] ?? 50;
         } else {
-            $action = "all";
-            $this->set("action", "all");
+            $action = 'all';
             $limit = 50;
-            $this->set("limit", $limit);
         }
-        $this->Session->write("action", $action);
-        $this->Session->write("limit", $limit);
-        unset($_SESSION["filter"]);
-        unset($_SESSION["value"]);
-        $this->set("report_val", $report_id);
-        $this->set("report_id", base64_decode($report_id));
+
+        $this->set('action', $action);
+        $this->set('limit', $limit);
+
+        // Use modern CakePHP session handling
+        $session = $this->request->getSession();
+        $session->write('action', $action);
+        $session->write('limit', $limit);
+
+        // Clear old session keys
+        $session->delete('filter');
+        $session->delete('value');
+
+        $this->set('report_val', $report_id);
     }
+
 
     public function get_all_hsse_investigation_data_list($report_id)
     {
@@ -4593,7 +4607,7 @@ class ReportsController extends AppController
         if (isset($_REQUEST["filter"])) {
             switch ($_REQUEST["filter"]) {
                 case "incident_loss":
-                    $lossDetail = $this->Loss->find("all", [
+                    $lossDetail = $this->Losses->find("all", [
                         "conditions" => ["type" => trim($_REQUEST["value"])],
                     ]);
                     if (count($lossDetail) > 0) {
@@ -4795,9 +4809,9 @@ class ReportsController extends AppController
                         "HsseIncident.id" => $adminArray[$i]["incident_id"],
                     ],
                 ]);
-                $incdent_loss = $this->Loss->find("all", [
+                $incdent_loss = $this->Losses->find("all", [
                     "conditions" => [
-                        "Loss.id" =>
+                        "Losses.id" =>
                             $incdent_loss_ID[0]["HsseIncident"][
                                 "incident_loss"
                             ],
@@ -5171,9 +5185,9 @@ class ReportsController extends AppController
         $incidentdetail = $this->HsseIncident->find("all", [
             "conditions" => ["HsseIncident.id" => $this->data["incidentid"]],
         ]);
-        $lossData = $this->Loss->find("all", [
+        $lossData = $this->Losses->find("all", [
             "conditions" => [
-                "Loss.id" =>
+                "Losses.id" =>
                     $incidentdetail[0]["HsseIncident"]["incident_loss"],
             ],
         ]);
@@ -5714,9 +5728,9 @@ class ReportsController extends AppController
                 }
 
                 if ($incidentdetail[$i]["HsseIncident"]["incident_loss"] != 0) {
-                    $incidentLoss_type = $this->Loss->find("all", [
+                    $incidentLoss_type = $this->Losses->find("all", [
                         "conditions" => [
-                            "Loss.id" =>
+                            "Losses.id" =>
                                 $incidentdetail[$i]["HsseIncident"][
                                     "incident_loss"
                                 ],
@@ -6179,7 +6193,7 @@ class ReportsController extends AppController
                 $incidentInvestigationDetail[$i]["HsseInvestigationData"][
                     "incident_summary"
                 ] = $incidentDetail[0]["HsseIncident"]["incident_summary"];
-                $lossDetail = $this->Loss->find("all", [
+                $lossDetail = $this->Losses->find("all", [
                     "conditions" => [
                         "id" =>
                             $incidentDetail[0]["HsseIncident"]["incident_loss"],

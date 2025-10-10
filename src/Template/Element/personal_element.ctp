@@ -8,12 +8,11 @@
  <br/>
      
 <label><?PHP echo __("Name:");?><span>*</span></label>
-
      <span id="personal_data_section">
      <select id="personal_data" name="personal_data" > <!--onchange="retrive_data();"-->
        <option value="0">Select One</option>	  
       <?php for($i=0;$i<count($userDetail);$i++){?>
-      <option value="<?php echo $userDetail[$i]['AdminMaster']['position_seniorty']; ?>" <?php if($userDetail[$i]['AdminMaster']['id']==$person){ echo "selected";} ?>><?php echo $userDetail[$i]['AdminMaster']['first_name']." ".$userDetail[$i]['AdminMaster']['last_name']; ?></option>
+      <option value="<?php echo $userDetail[$i]['position_seniority']; ?>" <?php if($userDetail[$i]['id']==$person){ echo "selected";} ?>><?php echo $userDetail[$i]['first_name']." ".$userDetail[$i]['last_name']; ?></option>
       <?php } ?>
       </select>
      </span><span id="personal_data_error" class="textcmpul"></span>

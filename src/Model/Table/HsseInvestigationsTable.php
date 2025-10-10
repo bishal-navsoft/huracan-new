@@ -3,7 +3,7 @@ namespace App\Model\Table;
 
 use Cake\ORM\Table;
 
-class HsseInvestigations extends Table
+class HsseInvestigationsTable extends Table
 {
     public function initialize(array $config): void
     {

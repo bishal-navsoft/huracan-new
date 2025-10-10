@@ -1,13 +1,14 @@
+<?php $webroot = $this->request->getAttribute('webroot');?>
 <script language="JavaScript" type="text/javascript">
 var action = "<?php echo $action;?>";
-var path = "<?php echo $this->webroot;?>";
-var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$this->webroot; ?>";
+var path = "<?php echo $webroot;?>";
+var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$webroot; ?>";
 var is_add = "<?php echo $is_add; ?>";
 var is_edit = "<?php echo $is_edit; ?>";
 var is_view = "<?php echo $is_view; ?>";
 var is_block = "<?php echo $is_block; ?>";
 var is_delete = "<?php echo $is_delete; ?>";
-var root_param ='<?php echo $this->params['pass'][0];?>';
+var root_param ='<?php echo $this->Params->pass(0); ?>';
 var pagelmt = "<?php if($limit=='all'){ echo '1000';}else{ echo $limit; }?>";
 
 var activate_selected = "<?php echo __('Activate');?>";
@@ -64,37 +65,30 @@ var login_history = "<?php echo __('Login History');?>";
 <aside>
 <?php echo $this->Element('left_menu'); ?>
 </aside>
-
-        
-           <script language="javascript" type="text/javascript">
-              $(document).ready(function() {
-                  $("#main").removeClass("selectedtab");
-                  $("#clientdata").removeClass("selectedtab");
-                  $("#personnel").removeClass("selectedtab");
-                  $("#incident").removeClass("selectedtab");
-                  $("#investigation").removeClass("selectedtab");
-                  $("#remidialaction").removeClass("selectedtab");
-                  $("#attachment").addClass("selectedtab");
-                  $("#clientfeedback").removeClass("selectedtab");
-                  $("#view").removeClass("selectedtab");
-                
-             });
-              function pageRedrection(){
-                
-                 document.location=path+"Reports/add_hsse_attachment/<?php echo base64_encode($id); ?>/";  		
-                
-              }
-              
-            </script>
-	   
-	    <section>
-		  <?php   echo $this->Element('hssetab');    ?>
-          	  <div class="topadmin_heading clearfix">
-		  <h2>Hsse Report(Attachment-<?php echo $report_number; ?>) List</h2>
-		  <?php if($is_add==1){ ?>
-		     <input type="button" name="button" value="Add Attachment" onclick="pageRedrection();" class="buttonadmin fright" />
-		  <?php } ?>   
-		  </div>
-    
-                  <div id="grid-paging"><?php echo $this->Html->script('hsse_attachment_report_grid'); ?></div>
-            </section>
+<script language="javascript" type="text/javascript">
+   $(document).ready(function() {
+      $("#main").removeClass("selectedtab");
+      $("#clientdata").removeClass("selectedtab");
+      $("#personnel").removeClass("selectedtab");
+      $("#incident").removeClass("selectedtab");
+      $("#investigation").removeClass("selectedtab");
+      $("#remidialaction").removeClass("selectedtab");
+      $("#attachment").addClass("selectedtab");
+      $("#clientfeedback").removeClass("selectedtab");
+      $("#view").removeClass("selectedtab");
+      
+   });
+   function pageRedrection(){
+      document.location=path+"Reports/add_hsse_attachment/<?php echo base64_encode($id); ?>/";  		
+   }
+</script>
+<section>
+   <?php   echo $this->Element('hssetab');    ?>
+   <div class="topadmin_heading clearfix">
+   <h2>Hsse Report(Attachment-<?php echo $report_number; ?>) List</h2>
+   <?php if($is_add==1){ ?>
+      <input type="button" name="button" value="Add Attachment" onclick="pageRedrection();" class="buttonadmin fright" />
+   <?php } ?>   
+	</div>
+   <div id="grid-paging"><?php echo $this->Html->script('hsse_attachment_report_grid'); ?></div>
+</section>

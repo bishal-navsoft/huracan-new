@@ -1,5 +1,39 @@
 <?php $webroot = $this->request->getAttribute('webroot');?>
+<aside>
+<?php echo $this->Element('left_menu'); ?>
+</aside>
+ <section>
+            <?php   echo $this->Element('hssetab');    ?>
+          
+           <script language="javascript" type="text/javascript">
+              $(document).ready(function() {
+                  $("#main").removeClass("selectedtab");
+                  $("#clientdata").removeClass("selectedtab");
+                  $("#personnel").addClass("selectedtab");
+                  $("#incident").removeClass("selectedtab");
+                  $("#investigation").removeClass("selectedtab");
+                  $("#remidialaction").removeClass("selectedtab");
+                  $("#attachment").removeClass("selectedtab");
+                  $("#clientfeedback").removeClass("selectedtab");
+                  $("#view").removeClass("selectedtab");
+                });
+              function pageRedrection(){
+                
+                 document.location=path+"Reports/add_report_personal/<?php echo base64_encode($id); ?>/";  		
+                
+              }
+              
+            </script>
+           
+          <h2 class="headingtop">HSSE Report (Personnel- <?php echo $report_number; ?>) List
+           <?php if($is_add==1){ ?>
+          <span style="float:right;vertical-align: middle"><input type="button" name="save" id="save" class="buttonsave" onclick="pageRedrection();" value="<?php echo __("Add New Personnel"); ?>" /></span>
+          <?php } ?>
+          </h2>   
+       <div id="grid-paging" ><?php echo $this->Html->script('report_hsse_personel_grid'); ?></div>
+ </section>
 <script language="JavaScript" type="text/javascript">
+var csrfToken = <?= json_encode($this->request->getParam('_csrfToken')) ?>;
 var action = "<?php echo $action;?>";
 var path = "<?php echo $webroot;?>";
 var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$webroot; ?>";
@@ -9,7 +43,6 @@ var is_view = "<?php echo $is_view; ?>";
 var is_block = "<?php echo $is_block; ?>";
 var is_delete = "<?php echo $is_delete; ?>";
 var pagelmt = "<?php if($limit=='all'){ echo '1000';}else{ echo $limit; }?>";
-
 var activate_selected = "<?php echo __('Activate');?>";
 var deactivate_selected = "<?php echo __('Deactivate');?>";
 var delete_selected = "<?php echo __('Delete');?>";
@@ -69,36 +102,3 @@ var act = "<?php echo __('Active');?>";
 var inact = "<?php echo __('Inactive');?>";
 
 </script>
-<aside>
-<?php echo $this->Element('left_menu'); ?>
-</aside>
- <section>
-            <?php   echo $this->Element('hssetab');    ?>
-          
-           <script language="javascript" type="text/javascript">
-              $(document).ready(function() {
-                  $("#main").removeClass("selectedtab");
-                  $("#clientdata").removeClass("selectedtab");
-                  $("#personnel").addClass("selectedtab");
-                  $("#incident").removeClass("selectedtab");
-                  $("#investigation").removeClass("selectedtab");
-                  $("#remidialaction").removeClass("selectedtab");
-                  $("#attachment").removeClass("selectedtab");
-                  $("#clientfeedback").removeClass("selectedtab");
-                  $("#view").removeClass("selectedtab");
-                });
-              function pageRedrection(){
-                
-                 document.location=path+"Reports/add_report_personal/<?php echo base64_encode($id); ?>/";  		
-                
-              }
-              
-            </script>
-           
-          <h2 class="headingtop">HSSE Report (Personnel- <?php echo $report_number; ?>) List
-           <?php if($is_add==1){ ?>
-          <span style="float:right;vertical-align: middle"><input type="button" name="save" id="save" class="buttonsave" onclick="pageRedrection();" value="<?php echo __("Add New Personnel"); ?>" /></span>
-          <?php } ?>
-          </h2>   
-       <div id="grid-paging" ><?php echo $this->Html->script('report_hsse_personel_grid'); ?></div>
- </section>

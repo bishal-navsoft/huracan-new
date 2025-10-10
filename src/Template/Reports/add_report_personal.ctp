@@ -1,6 +1,6 @@
- <script language="javascript" type="text/javascript">
-
- function isNumberKey(evt)
+<?php $webroot = $this->request->getAttribute('webroot');?>
+<script language="javascript" type="text/javascript">
+ 	function isNumberKey(evt)
     {
          var charCode = (evt.which) ? evt.which : event.keyCode
          if (charCode > 31 && (charCode < 48 || charCode > 57))
@@ -11,22 +11,21 @@
 	     
 function add_report_personal()
 {
-             
-  
-            var personal_data = jQuery.trim(document.getElementById('personal_data').value);
-	    if(personal_data==0){
-	        document.getElementById('personal_data_error').innerHTML='Please select name';
-	        return false;
-	    }else{
-	       document.getElementById('personal_data_error').innerHTML=''; 
-	    }
+    var personal_data = $('#personal_data').val();
+	console.log(personal_data);
+	if(personal_data==0){
+		document.getElementById('personal_data_error').innerHTML='Please select name';
+		return false;
+	}else{
+		document.getElementById('personal_data_error').innerHTML=''; 
+	}
 	
 	    var since_sleep = jQuery.trim(document.getElementById('since_sleep').value);
 	    var report_id ='<?php echo $report_id;?>';
 	    var last_sleep = jQuery.trim(document.getElementById('last_sleep').value);
             var dataStr = $("#add_report_personnel_form").serialize();
-            var rootpath='<?php echo $this->webroot ?>';
-	    document.getElementById('loader').innerHTML='<img src="<?php echo $this->webroot; ?>img/loader.gif" />';	
+            var rootpath='<?php echo $webroot ?>';
+	    document.getElementById('loader').innerHTML='<img src="<?php echo $webroot; ?>img/loader.gif" />';	
               $.ajax({
 			  type: "POST",
 			  url: rootpath+"Reports/hssepersonnelprocess/",
@@ -36,10 +35,10 @@ function add_report_personal()
 		
 		            if(res=='add'){
 				   document.getElementById('loader').innerHTML='<font color="green">Personnel Data Added Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_perssonel_list/<?php echo base64_encode($report_id); ?>';
+				   document.location='<?php echo $webroot; ?>Reports/report_hsse_perssonel_list/<?php echo base64_encode($report_id); ?>';
 			     }else if(res=='update'){
 				   document.getElementById('loader').innerHTML='<font color="green">Personnel Data Update Successfully</font>';
-				   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_perssonel_list/<?php echo base64_encode($report_id); ?>';
+				   document.location='<?php echo $webroot; ?>Reports/report_hsse_perssonel_list/<?php echo base64_encode($report_id); ?>';
 				   
                              }else if(res=='avl'){
 				   document.getElementById('loader').innerHTML='<font color="red">Personnel Data Already Exist</font>';

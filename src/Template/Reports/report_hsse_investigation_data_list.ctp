@@ -1,7 +1,7 @@
+<?php $webroot = $this->request->getAttribute('webroot');?>
 <script language="JavaScript" type="text/javascript">
-      
-var path = "<?php echo $this->webroot;?>";
-var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$this->webroot; ?>";
+var path = "<?php echo $webroot;?>";
+var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$webroot; ?>";
 var is_add = 1;
 var is_edit = 1;
 var is_view = 1;
@@ -72,39 +72,32 @@ var inact = "<?php echo __('Inactive');?>";
 <aside>
 <?php echo $this->Element('left_menu'); ?>
 </aside>
- <section>
-            <?php   echo $this->Element('hssetab');    ?>
+<section>
+    <?php   echo $this->Element('hssetab');    ?>
+    <script language="javascript" type="text/javascript">
+        $(document).ready(function() {
+            $("#main").removeClass("selectedtab");
+            $("#clientdata").removeClass("selectedtab");
+            $("#personnel").removeClass("selectedtab");
+            $("#incident").removeClass("selectedtab");
+            $("#investigation").removeClass("selectedtab");
+            $("#investigationdata").addClass("selectedtab");
+            $("#remidialaction").removeClass("selectedtab");
+            $("#attachment").removeClass("selectedtab");
+            $("#clientfeedback").removeClass("selectedtab");
+            $("#view").removeClass("selectedtab");
+          });
+        function pageRedrection(){
+            var path = "<?php echo $webroot;?>";
+            document.location=path+"Reports/add_investigation_data_analysis/<?php echo base64_encode($report_id); ?>/";  		
           
-           <script language="javascript" type="text/javascript">
-              $(document).ready(function() {
-                  $("#main").removeClass("selectedtab");
-                  $("#clientdata").removeClass("selectedtab");
-                  $("#personnel").removeClass("selectedtab");
-                  $("#incident").removeClass("selectedtab");
-                  $("#investigation").removeClass("selectedtab");
-                  $("#investigationdata").addClass("selectedtab");
-                  $("#remidialaction").removeClass("selectedtab");
-                  $("#attachment").removeClass("selectedtab");
-                  $("#clientfeedback").removeClass("selectedtab");
-                  $("#view").removeClass("selectedtab");
-                });
-              function pageRedrection(){
-                 var path = "<?php echo $this->webroot;?>";
-                 document.location=path+"Reports/add_investigation_data_analysis/<?php echo base64_encode($report_id); ?>/";  		
-                
-              }
-              
-            </script>
-           
-         
-           <div class="topadmin_heading clearfix">
-                      <h2>HSSE Report (Data Analysis- <?php echo $report_number; ?>) List</h2>
-                      <?php if($is_add==1){ ?>
-                             <input type="button" name="button" value="Add Incident Investigation" onclick="pageRedrection();" class="buttonadmin fright" />
-                      <?php } ?>
-           </div>
-          
-          
-          
-      <div id="grid-paging" ><?php echo $this->Html->script('report_hsse_incident_investigation_grid'); ?></div>
- </section>
+        }
+    </script>
+    <div class="topadmin_heading clearfix">
+        <h2>HSSE Report (Data Analysis- <?php echo $report_number; ?>) List</h2>
+        <?php if($is_add==1){ ?>
+                <input type="button" name="button" value="Add Incident Investigation" onclick="pageRedrection();" class="buttonadmin fright" />
+        <?php } ?>
+    </div>
+    <div id="grid-paging" ><?php echo $this->Html->script('report_hsse_incident_investigation_grid'); ?></div>
+</section>

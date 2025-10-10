@@ -3,15 +3,16 @@ namespace App\Model\Table;
 
 use Cake\ORM\Table;
 
-class LossesTable extends Table
+class IncidentCategoryTable extends Table
 {
     public function initialize(array $config): void
     {
         parent::initialize($config);
 
-        // Explicit table name if it doesn't follow conventions
-        $this->setTable('losses'); // your actual table name
+        $this->setTable('incident_categories');
         $this->setPrimaryKey('id');
+        $this->setDisplayField('type');
     }
+	
 }
 ?>
