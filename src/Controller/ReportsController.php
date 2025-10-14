@@ -2453,118 +2453,127 @@ class ReportsController extends AppController
         $session->delete('value');
     }
 
-    public function get_all_incident_list($report_id)
+    public function getAllIncidentList($report_id = null)
     {
-        Configure::write("debug", "2");
-        $this->layout = "ajax";
+        $this->request->allowMethod(['post', 'ajax']);
+        $this->viewBuilder()->setLayout('ajax');
         $this->_checkAdminSession();
-        $condition = "";
-        $condition = "HsseIncident.report_id = $report_id AND HsseIncident.isdeleted = 'N'";
-        if (isset($_REQUEST["filter"])) {
-            switch ($_REQUEST["filter"]) {
-                case "report_no":
-                    $condition .=
-                        "AND ucase(HsseIncident." .
-                        $_REQUEST["filter"] .
-                        ") like '" .
-                        $_REQUEST["value"] .
-                        "%'";
+
+        $this->autoRender = false;
+        $this->response = $this->response->withType('json');
+
+        $HsseIncidents = $this->loadModel('HsseIncident');
+        $IncidentSeverity = $this->loadModel('IncidentSeverity');
+        $Losses = $this->loadModel('Losses');
+        $IncidentCategory = $this->loadModel('IncidentCategory');
+        $IncidentSubCategory = $this->loadModel('IncidentSubCategory');
+
+        // Base conditions
+        $conditions = [
+            'HsseIncident.report_id' => $report_id,
+            'HsseIncident.isdeleted' => 'N',
+        ];
+
+        // Filtering
+        $filter = $this->request->getData('filter');
+        $value = $this->request->getData('value');
+
+        if (!empty($filter) && !empty($value)) {
+            switch ($filter) {
+                case 'report_no':
+                    $conditions["UPPER(HsseIncident.$filter) LIKE"] = strtoupper($value) . '%';
                     break;
             }
         }
-        $limit = null;
-        if ($_REQUEST["limit"] == "all") {
-            //$condition .= " order by Category.id DESC";
-        } else {
-            $limit = $_REQUEST["start"] . ", " . $_REQUEST["limit"];
-        }
-        //$count = $this->HsseIncident->find('count' ,array('conditions' => $condition));
+
+        // Pagination
+        $start = (int)$this->request->getData('start', 0);
+        $limit = (int)$this->request->getData('limit', 25);
+
+        // Count total
+        $count = $HsseIncidents->find()
+            ->where($conditions)
+            ->count();
+
+        // Fetch incidents with limit
+        $query = $HsseIncidents->find()
+            ->where($conditions)
+            ->order(['HsseIncident.id' => 'DESC'])
+            ->offset($start)
+            ->limit($limit);
+
         $adminArray = [];
-        $count = $this->HsseIncident->find("count", [
-            "conditions" => $condition,
-        ]);
-        // $adminA = $this->HsseIncident->find('all',array('conditions' => $condition,'order' => 'HsseIncident.id DESC','limit'=>$limit));
-        $adminA = $this->HsseIncident->find("all", [
-            "conditions" => $condition,
-            "limit" => $limit,
-        ]);
-        $i = 0;
-        foreach ($adminA as $rec) {
-            if ($rec["HsseIncident"]["isblocked"] == "N") {
-                $adminA[$i]["HsseIncident"]["blockHideIndex"] = "true";
-                $adminA[$i]["HsseIncident"]["unblockHideIndex"] = "false";
-                $adminA[$i]["HsseIncident"]["isdeletdHideIndex"] = "true";
+        foreach ($query as $index => $rec) {
+            $data = $rec->toArray();
+
+            // Add dynamic UI flags
+            if ($data['isblocked'] === 'N') {
+                $data['blockHideIndex'] = true;
+                $data['unblockHideIndex'] = false;
+                $data['isdeletdHideIndex'] = true;
             } else {
-                $adminA[$i]["HsseIncident"]["blockHideIndex"] = "false";
-                $adminA[$i]["HsseIncident"]["unblockHideIndex"] = "true";
-                $adminA[$i]["HsseIncident"]["isdeletdHideIndex"] = "false";
+                $data['blockHideIndex'] = false;
+                $data['unblockHideIndex'] = true;
+                $data['isdeletdHideIndex'] = false;
             }
-            $i++;
-        }
-        if ($count == 0) {
-            $adminArray = [];
-        } else {
-            $adminArray = Set::extract($adminA, "{n}.HsseIncident");
+
+            $data['inc_no'] = $index + 1;
+
+            // Incident Severity
+            if (!empty($data['incident_severity'])) {
+                $severity = $IncidentSeverity->find()
+                    ->select(['type'])
+                    ->where(['IncidentSeverity.id' => $data['incident_severity']])
+                    ->first();
+                $data['incident_severity_type'] = $severity ? $severity->type : '';
+            } else {
+                $data['incident_severity_type'] = '';
+            }
+
+            // Loss Type
+            if (!empty($data['incident_loss'])) {
+                $loss = $Losses->find()
+                    ->select(['type'])
+                    ->where(['Losses.id' => $data['incident_loss']])
+                    ->first();
+                $data['incident_loss_type'] = $loss ? $loss->type : 'N/A';
+            } else {
+                $data['incident_loss_type'] = 'N/A';
+            }
+
+            // Category Type
+            if (!empty($data['incident_category'])) {
+                $cat = $IncidentCategory->find()
+                    ->select(['type'])
+                    ->where(['IncidentCategory.id' => $data['incident_category']])
+                    ->first();
+                $data['incident_category_type'] = $cat ? $cat->type : 'N/A';
+            } else {
+                $data['incident_category_type'] = 'N/A';
+            }
+
+            // Sub-category Type
+            if (!empty($data['incident_sub_category'])) {
+                $subcat = $IncidentSubCategory->find()
+                    ->select(['type'])
+                    ->where(['IncidentSubCategory.id' => $data['incident_sub_category']])
+                    ->first();
+                $data['incident_sub_category_type'] = $subcat ? $subcat->type : 'N/A';
+            } else {
+                $data['incident_sub_category_type'] = 'N/A';
+            }
+
+            $adminArray[] = $data;
         }
 
-        for ($i = 0; $i < count($adminArray); $i++) {
-            $adminArray[$i]["inc_no"] = $i + 1;
-            if ($adminArray[$i]["incident_severity"] != 0) {
-                $incidentSeverity_type = $this->IncidentSeverity->find("all", [
-                    "conditions" => [
-                        "IncidentSeverity.id" =>
-                            $adminArray[$i]["incident_severity"],
-                    ],
-                ]);
-                $adminArray[$i]["incident_severity_type"] =
-                    $incidentSeverity_type[0]["IncidentSeverity"]["type"];
-            } else {
-                $adminArray[$i]["incident_severity_type"] = "";
-            }
-            if ($adminArray[$i]["incident_loss"] != 0) {
-                $incidentLoss_type = $this->Losses->find("all", [
-                    "conditions" => [
-                        "Losses.id" => $adminArray[$i]["incident_loss"],
-                    ],
-                ]);
-                $adminArray[$i]["incident_loss_type"] =
-                    $incidentLoss_type[0]["Loss"]["type"];
-            } else {
-                $adminArray[$i]["incident_loss_type"] = "N/A";
-            }
-            if ($adminArray[$i]["incident_category"] != 0) {
-                $incident_category_type = $this->IncidentCategory->find("all", [
-                    "conditions" => [
-                        "IncidentCategory.id" =>
-                            $adminArray[$i]["incident_category"],
-                    ],
-                ]);
-                $adminArray[$i]["incident_category_type"] =
-                    $incident_category_type[0]["IncidentCategory"]["type"];
-            } else {
-                $adminArray[$i]["incident_category_type"] = "N/A";
-            }
-            if ($adminArray[$i]["incident_sub_category"] != 0) {
-                $incident_sub_category_type = $this->IncidentSubCategory->find(
-                    "all",
-                    [
-                        "conditions" => [
-                            "IncidentSubCategory.id" =>
-                                $adminArray[$i]["incident_sub_category"],
-                        ],
-                    ]
-                );
-                $adminArray[$i]["incident_sub_category_type"] =
-                    $incident_sub_category_type[0]["IncidentSubCategory"][
-                        "type"
-                    ];
-            } else {
-                $incidentdetailHolder[$i]["incident_sub_category_type"] = "N/A";
-            }
-        }
-        $this->set("total", $count); //send total to the view
-        $this->set("admins", $adminArray); //send products to the view
-        // $this->set('status', $action);
+        // Output JSON for ExtJS
+        $response = [
+            'total' => $count,
+            'admins' => $adminArray,
+        ];
+
+        echo json_encode($response);
+        return $this->response;
     }
 
     function incident_block($id = null)
@@ -2620,200 +2629,6 @@ class ReportsController extends AppController
         }
     }
 
-    /*function add_hsse_incident($reoprt_id = null, $incident_id = null)
-    {
-        $this->_checkAdminSession();
-        $this->_getRoleMenuPermission();
-        $this->grid_access();
-        $this->layout = "after_adminlogin_template";
-        $incidentSeverityDetail = $this->IncidentSeverity->find("all", [
-            "conditions" => ["IncidentSeverity.servrity_type" => "ssh"],
-        ]);
-        $incidentLossDetail = $this->Loss->find("all");
-        $this->set("incidentLossDetail", $incidentLossDetail);
-
-        $this->set("incidentSeverityDetail", $incidentSeverityDetail);
-        $report = $this->Report->find("all", [
-            "conditions" => ["Report.isdeleted" => "N"],
-        ]);
-        $this->set("incidentSeverityDetail", $incidentSeverityDetail);
-        $incidentdetail = $this->HsseIncident->find("all", [
-            "conditions" => ["HsseIncident.id" => base64_decode($incident_id)],
-        ]);
-        $reportdetail = $this->Report->find("all", [
-            "conditions" => ["Report.id" => base64_decode($reoprt_id)],
-        ]);
-        $clientdetail = $this->HsseClient->find("all", [
-            "conditions" => [
-                "HsseClient.report_id" => $reportdetail[0]["Report"]["id"],
-            ],
-        ]);
-        if (count($clientdetail) > 0) {
-            if ($clientdetail[0]["HsseClient"]["clientreviewed"] == 3) {
-                $this->set("client_feedback", 1);
-            } elseif ($clientdetail[0]["HsseClient"]["clientreviewed"] != 3) {
-                $this->set("client_feedback", 0);
-            }
-        } else {
-            $this->set("client_feedback", 0);
-        }
-
-        $this->set("report_number", $reportdetail[0]["Report"]["report_no"]);
-        if (count($incidentdetail) > 0) {
-            if ($incidentdetail[0]["HsseIncident"]["incident_loss"] != 0) {
-                $this->set(
-                    "incident_loss",
-                    $incidentdetail[0]["HsseIncident"]["incident_loss"]
-                );
-                if (
-                    $incidentdetail[0]["HsseIncident"]["incident_category"] ==
-                    ""
-                ) {
-                    $this->set("incident_category", "");
-                } else {
-                    $this->set(
-                        "incident_category",
-                        $incidentdetail[0]["HsseIncident"]["incident_category"]
-                    );
-                }
-
-                $incidentCategoryDetail = $this->IncidentCategory->find("all", [
-                    "conditions" => [
-                        "IncidentCategory.loss_id" =>
-                            $incidentdetail[0]["HsseIncident"]["incident_loss"],
-                    ],
-                ]);
-                if (
-                    isset($incidentCategoryDetail[0]["IncidentCategory"]["id"])
-                ) {
-                    $this->set(
-                        "incidentCategoryDetail",
-                        $incidentCategoryDetail
-                    );
-                } else {
-                    $this->set("incidentCategoryDetail", []);
-                }
-
-                if (
-                    $incidentdetail[0]["HsseIncident"][
-                        "incident_sub_category"
-                    ] == ""
-                ) {
-                    $this->set("incident_sub_category", "");
-                } else {
-                    $this->set(
-                        "incident_sub_category",
-                        $incidentdetail[0]["HsseIncident"][
-                            "incident_sub_category"
-                        ]
-                    );
-                }
-
-                $incidentSubCategoryDetail = $this->IncidentSubCategory->find(
-                    "all",
-                    [
-                        "conditions" => [
-                            "IncidentSubCategory.loss_id" =>
-                                $incidentCategoryDetail[0]["IncidentCategory"][
-                                    "id"
-                                ],
-                        ],
-                    ]
-                );
-                if (count($incidentSubCategoryDetail) > 0) {
-                    $this->set(
-                        "incidentSubCategoryDetail",
-                        $incidentSubCategoryDetail
-                    );
-                } else {
-                    $this->set("incidentSubCategoryDetail", []);
-                }
-            } else {
-                $this->set("incident_loss", 0);
-                $this->set("incident_category", "");
-                $this->set("incident_sub_category", "");
-            }
-
-            if ($incidentdetail[0]["HsseIncident"]["date_incident"] != "") {
-                $inc = explode(
-                    "-",
-                    $incidentdetail[0]["HsseIncident"]["date_incident"]
-                );
-                $date_incident = $inc[1] . "-" . $inc[2] . "-" . $inc[0];
-                $this->set("date_incident", $date_incident);
-            } else {
-                $this->set("date_incident", "");
-            }
-            $this->set(
-                "time_incident",
-                $incidentdetail[0]["HsseIncident"]["incident_time"]
-            );
-            $this->set(
-                "incident_summary",
-                $incidentdetail[0]["HsseIncident"]["incident_summary"]
-            );
-            $this->set(
-                "report_id",
-                $incidentdetail[0]["HsseIncident"]["report_id"]
-            );
-            $this->set("detail", $incidentdetail[0]["HsseIncident"]["detail"]);
-            $this->set("heading", "Edit Incident Data");
-            $this->set("button", "Update");
-            $this->set("incident_id", base64_decode($incident_id));
-            $this->set(
-                "incident_severity",
-                $incidentdetail[0]["HsseIncident"]["incident_severity"]
-            );
-            $this->set(
-                "incident_no",
-                $incidentdetail[0]["HsseIncident"]["incident_no"]
-            );
-        } else {
-            $incidentCategoryDetail = $this->IncidentCategory->find("all", [
-                "conditions" => [
-                    "IncidentCategory.loss_id" =>
-                        $incidentLossDetail[0]["Loss"]["id"],
-                ],
-            ]);
-            $incidentSubCategoryDetail = $this->IncidentSubCategory->find(
-                "all",
-                [
-                    "conditions" => [
-                        "IncidentSubCategory.loss_category_id" =>
-                            $incidentCategoryDetail[0]["IncidentCategory"][
-                                "id"
-                            ],
-                    ],
-                ]
-            );
-            $incidentdetail = $this->HsseIncident->find("all", [
-                "conditions" => [
-                    "HsseIncident.report_id" => base64_decode($reoprt_id),
-                ],
-            ]);
-            if (count($incidentdetail) > 0) {
-                $incident_no = count($incidentdetail) + 1;
-            } else {
-                $incident_no = 1;
-            }
-
-            $this->set("incidentCategoryDetail", $incidentCategoryDetail);
-            $this->set("incidentSubCategoryDetail", $incidentSubCategoryDetail);
-            $this->set("heading", "Add Incident Data");
-            $this->set("button", "Submit");
-            $this->set("incident_id", 0);
-            $this->set("incident_no", $incident_no);
-            $this->set("report_id", base64_decode($reoprt_id));
-            $this->set("incident_severity", "");
-            $this->set("date_incident", "");
-            $this->set("incident_category", "");
-            $this->set("incident_sub_category", "");
-            $this->set("incident_loss", "");
-            $this->set("incident_summary", "");
-            $this->set("detail", "");
-            $this->set("time_incident", "");
-        }
-    }*/
     public function addHsseIncident($report_id = null, $incident_id = null)
     {
         $this->_checkAdminSession();
@@ -2823,7 +2638,7 @@ class ReportsController extends AppController
 
         $decodedReportId = base64_decode($report_id);
         $decodedIncidentId = $incident_id ? base64_decode($incident_id) : null;
-
+        
         // Fetch severity and loss details
         $incidentSeverityDetail = $this->IncidentSeverity->find()
             ->where(['IncidentSeverity.servrity_type' => 'ssh'])
@@ -2877,7 +2692,7 @@ class ReportsController extends AppController
                 if (!$incidentCategoryDetail->isEmpty()) {
                     $firstCategory = $incidentCategoryDetail->first();
                     $incidentSubCategoryDetail = $this->IncidentSubCategory->find()
-                        ->where(['IncidentSubCategory.loss_id' => $firstCategory->id])
+                        ->where(['IncidentSubCategory.loss_id' => $incidentLoss])
                         ->all();
                 }
             }
@@ -2889,7 +2704,6 @@ class ReportsController extends AppController
                     $dateIncident = $dateParts[1] . '-' . $dateParts[2] . '-' . $dateParts[0];
                 }
             }
-
             $this->set([
                 'incident_loss' => $incidentLoss,
                 'incident_category' => $incidentCategory,
@@ -2946,55 +2760,61 @@ class ReportsController extends AppController
         }
     }
 
-    
-    public function hsseincidentprocess()
+    public function hsseIncidentProcess()
     {
+        // Use AJAX layout
         $this->viewBuilder()->setLayout('ajax');
-        $this->autoRender = false; // prevent rendering a view
-        $this->loadModel('HsseIncident');
+        $this->autoRender = false; // prevent auto-rendering a view
 
-        $data = $this->request->getData();
-        $res = 'add';
+        // Get form data
+        $data = $this->request->getData() ?? [];
 
-        // Check if updating an existing incident
-        if (!empty($data['add_report_incident_form']['id']) && $data['add_report_incident_form']['id'] != 0) {
-            $res = 'update';
-            $incident = $this->HsseIncident->get($data['add_report_incident_form']['id']);
-        } else {
-            $incident = $this->HsseIncident->newEmptyEntity();
+        if (empty($data)) {
+            echo 'fail';
+            return;
         }
-
+        //dd($this->HsseIncident->newEntity());
+        // Check if updating or adding
+        if (!empty($data['id']) && $data['id'] != 0) {
+            $incident = $this->HsseIncident->get($data['id']);
+            $res = 'update';
+        } else {
+            $incident = $this->HsseIncident->newEntity();
+            $res = 'add';
+        }
+        
         // Prepare incident data
         $incidentData = [
-            'incident_time'       => $data['incident_time'] ?? '',
-            'incident_loss'       => $data['incident_loss'] ?? '',
-            'incident_no'         => $data['incident_no'] ?? '',
-            'incident_summary'    => $data['incident_summary'] ?? '',
-            'detail'              => $data['detail'] ?? '',
+            'incident_time'       => $data['incident_time'] ?? null,
+            'incident_no'         => $data['incident_no'] ?? null,
+            'incident_summary'    => $data['incident_summary'] ?? null,
+            'detail'              => $data['detail'] ?? null,
             'report_id'           => $data['report_id'] ?? null,
+            'incident_loss'       => $data['incident_loss'] ?? null,
             'incident_category'   => $data['incident_category'] ?? 0,
             'incident_sub_category' => $data['incident_sub_category'] ?? 0,
             'incident_severity'   => $data['incident_severity'] ?? 0,
         ];
 
-        // Format date if provided
+        // Format date from MM-DD-YYYY to YYYY-MM-DD
         if (!empty($data['date_incident'])) {
-            $dateIncidentParts = explode('-', $data['date_incident']);
-            if (count($dateIncidentParts) === 3) {
+            $parts = explode('-', $data['date_incident']);
+            if (count($parts) === 3) {
                 $incidentData['date_incident'] = sprintf(
                     '%04d-%02d-%02d',
-                    $dateIncidentParts[2],
-                    $dateIncidentParts[0],
-                    $dateIncidentParts[1]
+                    $parts[2], // Year
+                    $parts[0], // Month
+                    $parts[1]  // Day
                 );
             }
         } else {
             $incidentData['date_incident'] = null;
         }
 
-        // Patch and save
+        // Patch entity
         $incident = $this->HsseIncident->patchEntity($incident, $incidentData);
 
+        // Save
         if ($this->HsseIncident->save($incident)) {
             echo $res;
         } else {
@@ -3004,48 +2824,38 @@ class ReportsController extends AppController
         return;
     }
 
-
-    function displaycontentforloss()
+    public function displayContentForLoss()
     {
-        $this->layout = "ajax";
-        if (!empty($this->data)) {
-            switch ($this->data["type"]) {
-                case "incident_loss":
-                    $incidentCategoryDetail = $this->IncidentCategory->find(
-                        "all",
-                        ["conditions" => ["loss_id" => $this->data["id"]]]
-                    );
-                    if (count($incidentCategoryDetail) > 0) {
-                        $this->set(
-                            "incidentCategoryDetail",
-                            $incidentCategoryDetail
-                        );
-                    } else {
-                        $this->set("incidentCategoryDetail", []);
-                    }
-                    $this->set("type", $this->data["type"]);
+        $this->request->allowMethod(['post']); // ensure only POST
+        $this->viewBuilder()->setLayout('ajax');
+
+        $data = $this->request->getData();
+
+        $incidentCategoryDetail = [];
+        $incidentSubCategoryDetail = [];
+        $type = null;
+
+        if (!empty($data)) {
+            $type = $data['type'] ?? null;
+            $id = isset($data['id']) ? (int)$data['id'] : null; // cast to integer
+
+            switch ($type) {
+                case 'incident_loss':
+                    $incidentCategoryDetail = $this->IncidentCategory->find()
+                        ->where(['loss_id' => $id])
+                        ->toArray();
                     break;
-                case "incident_category":
-                    $incidentSubCategoryDetail = $this->IncidentSubCategory->find(
-                        "all",
-                        [
-                            "conditions" => [
-                                "loss_category_id" => $this->data["id"],
-                            ],
-                        ]
-                    );
-                    if (count($incidentSubCategoryDetail) > 0) {
-                        $this->set(
-                            "incidentSubCategoryDetail",
-                            $incidentSubCategoryDetail
-                        );
-                    } else {
-                        $this->set("incidentSubCategoryDetail", []);
-                    }
-                    $this->set("type", $this->data["type"]);
+
+                case 'incident_category':
+                    $incidentSubCategoryDetail = $this->IncidentSubCategory->find()
+                        ->where(['loss_category_id' => $id])
+                        ->toArray();
                     break;
             }
         }
+
+        $this->set(compact('incidentCategoryDetail', 'incidentSubCategoryDetail', 'type'));
+        $this->set('_serialize', ['incidentCategoryDetail', 'incidentSubCategoryDetail', 'type']);
     }
 
     public function addHsseAttachment($report_id = null, $attachment_id = null)

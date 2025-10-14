@@ -23,13 +23,13 @@ class HsseIncidentTable extends Table
 
         $this->belongsTo('Loss', [
             'foreignKey' => 'incident_loss',
-            'className'  => 'App\Model\Table\LossTable',
+            'className'  => 'App\Model\Table\LossesTable',
         ]);
 
         $this->belongsTo('IncidentSeverity', [
             'foreignKey' => 'incident_severity',
             'className'  => 'App\Model\Table\IncidentSeverityTable',
-            'conditions' => ['IncidentSeverity.servrity_type' => 'hsse'],
+            'propertyName' => 'incidentSeverityAssoc',
         ]);
     }
 

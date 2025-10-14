@@ -1,268 +1,149 @@
 Ext.onReady(function(){
 // CUSTOM FUNCTIONS //
-
-function onFilterItemCheck(item, checked){
+	function onFilterItemCheck(item, checked){
         if(checked) {
             Ext.get('filterlabel').update('['+item.text+']');    
         }
     }
+	//Function for unblock selected records
+	function delete_incident(id) {
+        Ext.Msg.confirm('Confirm', 'Are you sure you want to delete this record?', function (btn) {
+            if (btn === 'yes') {
+                $.ajax({
+                    type: "POST",
+                    url: path + "Reports/incident_delete/",
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    data: { id: id },
+                    success: function (res) {
+                        if (res === 'ok') {
+                            document.location = path + 'Reports/report_hsse_incident_list/' + report_val;
+                        } else {
+                            Ext.Msg.alert('Error', 'Failed to delete record.');
+                        }
+                    },
+                    error: function () {
+                        Ext.Msg.alert('Error', 'Server error while deleting record.');
+                    }
+                });
+            }
+        });
+    }
 
-//Function for unblock selected records
-function delete_incident(id){
-	
-	$.ajax({
-			  type: "POST",
-			  url: path+"Reports/incident_delete/",
-			  data:"data=a&id="+id,
-			  success: function(res)
-			  {
-			     if(res=='ok'){
-				   document.location=path+'Reports/report_hsse_incident_list/'+report_val;
-				 }
-			   	   
-                          }
-		 
-	});
-	
-	
-	
-	
-}
-function unblockSelected()
-{
-						
-	var selectedArray = new Array();
-    selectedArray = checkBox.getSelections();
-	if(selectedArray.length == 0)
-	{
-		alert(select_one_record);
-		return false;
-	}	
-	
-	if(is_block == 1)
-	{
-		Ext.Msg.show({
-				title:activ_select_record
-			       ,msg:activate_select_record + '</b><br/>.'
-			       ,icon:Ext.Msg.QUESTION
-			       ,buttons:Ext.Msg.YESNO
-			       ,scope:this
-			       ,fn:function(response) {
-				       if('yes' !== response) {
-					       return;
-				       }
-				       else
-				       {
-					       var box = Ext.MessageBox.wait(please_wait, performing_actions);
-					       var selectedIds = "";
-					       for(var i=0; i<selectedArray.length; i++)
-					       {
-						       if(i==0)
-						       {
-							       selectedIds = selectedArray[i]["data"]["id"];
-						       }else
-						       {
-							       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
-						       }						
-						       
-						       
-	
-					       }
-					       Ext.Ajax.request(
-										       {
-													url: path+'Reports/incident_unblock/'+selectedIds+'/'
-													,method:'GET'
-													,success: function(response){
-													       ds.reload();
-													       box.hide();
-												       }
-												       ,failure: function(response){
-													       box.hide();
-													       Ext.Msg.alert(err, err_unblock);
-													       
-													       //ds.load();
-												       }
-												       ,scope: this
-															
-										       })
-														       
-					       
-				       }
-	//              console.info('Deleting record');
-			       }
-	});
-	
-	}
-	else
-	{
-		Ext.Msg.alert(warning,not_allowed_access);
-	}	
-	
-}	
+	function unblockSelected() {
+        var selectedArray = checkBox.getSelections();
+        if (selectedArray.length === 0) {
+            alert(select_one_record);
+            return false;
+        }
 
-function blockSelected()
-{
-	var selectedArray = new Array();
-    selectedArray = checkBox.getSelections();
-	if(selectedArray.length == 0)
-	{
-		alert(select_one_record);
-		return false;
-	}
-	if(is_block == 1)
-	{
-		Ext.Msg.show({
-					title:deactiv_select_record
-				       ,msg:deactivate_select_record + '</b><br/>.'
-				       ,icon:Ext.Msg.QUESTION
-				       ,buttons:Ext.Msg.YESNO
-				       ,scope:this
-				       ,fn:function(response) {
-					       if('yes' !== response) {
-						       return;
-					       }
-					       else
-					       {
-						       var box = Ext.MessageBox.wait(please_wait, performing_actions);										
-							   var selectedIds = "";
-						       for(var i=0; i<selectedArray.length; i++)
-						       {
-							       if(i==0)
-							       {
-								       selectedIds = selectedArray[i]["data"]["id"];
-							       }else
-							       {
-								       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
-							       }						
-							       
-							       
+        if (is_block == 1) {
+            Ext.Msg.confirm(activ_select_record, activate_select_record, function (response) {
+                if (response === 'yes') {
+                    var box = Ext.MessageBox.wait(please_wait, performing_actions);
+                    var selectedIds = selectedArray.map(rec => rec.data.id).join('^');
 
-						       }
-						       Ext.Ajax.request(
-											       {
-														url: path+'Reports/incident_block/'+selectedIds+'/'
-														,method:'GET'
-														,success: function(response){
-														       ds.reload();
-														       box.hide();
-													       }
-													       ,failure: function(response){
-														       box.hide();
-														       Ext.Msg.alert(err, err_block);
-														       
-														       //ds.load();
-													       }
-													       ,scope: this
-																
-											       })
-										       
-						       
-					       }
-	       //              console.info('Deleting record');
-				       }
-	});
-	}
-	else
-	{
-		Ext.Msg.alert(warning,not_allowed_access);
-	}			
+                    Ext.Ajax.request({
+                        url: path + 'Reports/incident_unblock/',
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': csrfToken },
+                        params: { ids: selectedIds },
+                        success: function () {
+                            ds.reload();
+                            box.hide();
+                        },
+                        failure: function () {
+                            box.hide();
+                            Ext.Msg.alert(err, err_unblock);
+                        }
+                    });
+                }
+            });
+        } else {
+            Ext.Msg.alert(warning, not_allowed_access);
+        }
+    }
+
+	function blockSelected() {
+        var selectedArray = checkBox.getSelections();
+        if (selectedArray.length === 0) {
+            alert(select_one_record);
+            return false;
+        }
+
+        if (is_block == 1) {
+            Ext.Msg.confirm(deactiv_select_record, deactivate_select_record, function (response) {
+                if (response === 'yes') {
+                    var box = Ext.MessageBox.wait(please_wait, performing_actions);
+                    var selectedIds = selectedArray.map(rec => rec.data.id).join('^');
+
+                    Ext.Ajax.request({
+                        url: path + 'Reports/incident_block/',
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': csrfToken },
+                        params: { ids: selectedIds },
+                        success: function () {
+                            ds.reload();
+                            box.hide();
+                        },
+                        failure: function () {
+                            box.hide();
+                            Ext.Msg.alert(err, err_block);
+                        }
+                    });
+                }
+            });
+        } else {
+            Ext.Msg.alert(warning, not_allowed_access);
+        }
+    }
+
+	function deleteSelected() {
+        var selectedArray = checkBox.getSelections();
+        if (selectedArray.length === 0) {
+            return false;
+        }
+
+        if (is_delete == 1) {
+            Ext.Msg.confirm(del_select_record, delete_select_record + '<br/>' + no_undo, function (response) {
+                if (response === 'yes') {
+                    var selectedIds = selectedArray.map(rec => rec.data.id).join('^');
+                    delete_incident(selectedIds);
+                }
+            });
+        } else {
+            Ext.Msg.alert(warning, not_allowed_access);
+        }
+    }
 	
-	
-}
-
-function deleteSelected()
-{
-
-	var selectedArray = new Array();
-    selectedArray = checkBox.getSelections();
-	if(selectedArray.length == 0)
-	{
-		
-		return false;
-	}
-	if(is_delete == 1)
-	{
-		Ext.Msg.show({
-					title:del_select_record
-				       ,msg:delete_select_record + '</b><br/>' + no_undo
-				       ,icon:Ext.Msg.QUESTION
-				       ,buttons:Ext.Msg.YESNO
-				       ,scope:this
-				       ,fn:function(response) {
-					       if('yes' !== response) {
-						       return;
-					       }
-					       else
-					       {
-						       var box = Ext.MessageBox.wait(please_wait, performing_actions);
-						       var selectedIds = "";
-						       for(var i=0; i<selectedArray.length; i++)
-						       {
-							       if(i==0)
-							       {
-								       selectedIds = selectedArray[i]["data"]["id"];
-								       
-							       }else
-							       {
-								       selectedIds = selectedIds+"^"+selectedArray[i]["data"]["id"];
-							       }						
-							       
-							       
-
-						       }
-					     	
-                                                if(is_delete == 1)
-						{
-						  delete_incident(selectedIds);
-						}
-						else
-						{
-						 Ext.Msg.alert(warning,not_allowed_access);
-						}
-						       
-						       
-										       
-						       
-					       }
-	       //              console.info('Deleting record');
-				       }
-	});
-					
-	}
-	else
-	{
-		Ext.Msg.alert(warning,not_allowed_access);
-	}
-	
-}
-
-var ds = new Ext.data.Store({	
-        proxy: new Ext.data.HttpProxy({url: AdminListPage+'Reports/get_all_incident_list/'+report_id}),  //note that I used host in the url
+	var ds = new Ext.data.Store({
+        proxy: new Ext.data.HttpProxy({
+            url: AdminListPage + 'Reports/get_all_incident_list/' + report_id,
+            headers: {'X-CSRF-Token': csrfToken}, method: 'POST'}),
         reader: new Ext.data.JsonReader({
-        root: 'admins',
-	totalProperty: 'total',
-        remoteSort: true,
-		fields: [
-          {name: 'id'},
-	  {name: 'incident_no'},
-	  {name: 'report_id'},
-	  {name: 'incident_time'},
-	  {name: 'date_incident'},
-          {name: 'incident_severity'},
-          {name: 'incident_loss'},
-	  {name: 'incident_category'},
-	  {name: 'incident_sub_category'},
-	  {name: 'incident_severity_type'},
-	  {name: 'incident_loss_type'},
-	  {name: 'incident_category_type'},
-	  {name: 'incident_sub_category_type'},
-	  {name: 'isblocked'},
-	  {name: 'blockHideIndex', type: 'boolean'},
-	  {name: 'unblockHideIndex', type: 'boolean'},
-	  {name: 'isdeletdHideIndex', type: 'boolean'},
-	]
-	})
-    });  
+            root: 'admins',
+            totalProperty: 'total',
+            remoteSort: true,
+            fields: [
+                { name: 'id' },
+                { name: 'incident_no' },
+                { name: 'report_id' },
+                { name: 'incident_time' },
+                { name: 'date_incident' },
+                { name: 'incident_severity' },
+                { name: 'incident_loss' },
+                { name: 'incident_category' },
+                { name: 'incident_sub_category' },
+                { name: 'incident_severity_type' },
+                { name: 'incident_loss_type' },
+                { name: 'incident_category_type' },
+                { name: 'incident_sub_category_type' },
+                { name: 'isblocked' },
+                { name: 'blockHideIndex', type: 'boolean' },
+                { name: 'unblockHideIndex', type: 'boolean' },
+                { name: 'isdeletdHideIndex', type: 'boolean' }
+            ]
+        })
+    });
 	
 	var pagingBar = new Ext.PagingToolbar({
         pageSize: eval(pagelmt),
@@ -270,81 +151,76 @@ var ds = new Ext.data.Store({
         displayInfo: true,
         displayMsg: display_topics, 
         emptyMsg: no_display_records
-        
     });
 	//alert(eval(pagelmt));
-	
-	
-	
-	
-		var checkBox = new Ext.grid.CheckboxSelectionModel();
+	var checkBox = new Ext.grid.CheckboxSelectionModel();
+	var Actions = new Ext.ux.grid.RowActions({
+		header:acts	
+		,dataIndex: 0
+		,actions: [{
+			qtip: edt,
+			iconCls: 'edit',
+			callback:function(grid, records, action, groupId) {	
+				if(is_edit == 1)
+				{
+					//location.href = path+"Users/add_mobilesite/"+records['data']['id']+"/";
+					location.href = path + "Reports/add_hsse_incident/" 
+					+ Base64.encode(String(records['data']['report_id'])) + "/" 
+					+ Base64.encode(String(records['data']['id']));
 
-		var Actions = new Ext.ux.grid.RowActions({
-				header:acts	
-				,dataIndex: 0
-				,actions: [{
-					qtip: edt,
-					iconCls: 'edit',
-					callback:function(grid, records, action, groupId) {	
-						if(is_edit == 1)
-						{
-							//location.href = path+"Users/add_mobilesite/"+records['data']['id']+"/";
-							location.href = path+"Reports/add_hsse_incident/"+Base64.encode(records['data']['report_id'])+"/"+Base64.encode(records['data']['id']);
-						}
-						else
-						{
-							Ext.Msg.alert(warning,not_allowed_access);
-						}					
 				}
-		     },{
+				else
+				{
+					Ext.Msg.alert(warning,not_allowed_access);
+				}					
+			}
+		},{
 			qtip: activ,
 			iconCls: 'unblock',
 			hideIndex : 'blockHideIndex',
 			callback:function(grid, records, action, groupId) {	
-				
 				var tp="Activate";
 				var turl="unblock";
 				if(records['data']['isblocked']=="Y")
 				{
 					if(is_block == 1)
 					{
-					Ext.Msg.show({
-						title:tp + ' record'
-						,msg:activ_select_record + '<br/>'
-						,icon:Ext.Msg.QUESTION
-						,buttons:Ext.Msg.YESNO
-						,scope:this
-						,fn:function(response) {
-							if('yes' !== response) {
-							return;
-							}
-							else
-							{
-								var box = Ext.MessageBox.wait(please_wait, performing_actions);
-								Ext.Ajax.request(
+						Ext.Msg.show({
+							title:tp + ' record'
+							,msg:activ_select_record + '<br/>'
+							,icon:Ext.Msg.QUESTION
+							,buttons:Ext.Msg.YESNO
+							,scope:this
+							,fn:function(response) {
+								if('yes' !== response) {
+								return;
+								}
+								else
 								{
-									url: path+'Reports/incident_unblock/'+records['data']['id']+'/'
-									,method:'GET'
-									,success: function(response){
-										ds.reload();
-										box.hide();
-									}
-									,failure: function(response){
-										Ext.Msg.alert(err, err_unblock);
-										//ds.load();
-									}
-									,scope: this
-												 
-								});	
+									var box = Ext.MessageBox.wait(please_wait, performing_actions);
+									Ext.Ajax.request(
+									{
+										url: path+'Reports/incident_unblock/'+records['data']['id']+'/'
+										,method:'GET'
+										,success: function(response){
+											ds.reload();
+											box.hide();
+										}
+										,failure: function(response){
+											Ext.Msg.alert(err, err_unblock);
+											//ds.load();
+										}
+										,scope: this
+									});	
+								}
+								//console.info('Deleting record');
 							}
-				//              	console.info('Deleting record');
-						}
 						});
 					}
-				else
-				{
-					Ext.Msg.alert(warning,not_allowed_access);
-				}
+					else
+					{
+						Ext.Msg.alert(warning,not_allowed_access);
+					}
 				}else{
 					  Ext.Msg.alert(message,already_delivered);
 				}
@@ -377,7 +253,7 @@ var ds = new Ext.data.Store({
 								{
 									 url: path+'Reports/incident_block/'+records['data']['id']+'/'
 									 ,method:'GET'
-   //,params:{id:record.data.id,con:'games',act:'movetoup'}
+   									//,params:{id:record.data.id,con:'games',act:'movetoup'}
 									,success: function(response){
 										ds.reload();
 										box.hide();
@@ -419,13 +295,11 @@ var ds = new Ext.data.Store({
 					{
 						Ext.Msg.alert(warning,not_allowed_access);
 					}
-				
+				}
 			}
-			
-		}
 		
 		  ]
-		});
+	});
 	
 		
 	function status(val)
@@ -437,18 +311,17 @@ var ds = new Ext.data.Store({
     //This is the column model.  This defines the columns in my datagrid.
     //It also maps each column with the appropriate json data from my database (dataIndex).
     var cm = new Ext.grid.ColumnModel([
-	 checkBox,
+	 	checkBox,
         /*{header: "ID", dataIndex: 'id', width: 100, hidden: true},*/
         {header: incidenttime,sortable: true, dataIndex: 'incident_time', width:105},
-	{header: incidentnumber,sortable: true, dataIndex: 'incident_no', width:90},
+		{header: incidentnumber,sortable: true, dataIndex: 'incident_no', width:90},
         {header: incidentdate,sortable: true, dataIndex: 'date_incident', width:120},
         {header: incidentserverity,sortable: true, dataIndex: 'incident_severity_type', width:130},
        	{header: incidentloss,sortable: true, dataIndex: 'incident_loss_type', width:130},
-	/*{header: incidentcategory,sortable: true, dataIndex: 'incident_category_type', width:115},*/
-	{header: stts, sortable: true, renderer: status, dataIndex: 'isblocked', width: 88},
-	Actions
-		
-    ]);
+		/*{header: incidentcategory,sortable: true, dataIndex: 'incident_category_type', width:115},*/
+		{header: stts, sortable: true, renderer: status, dataIndex: 'isblocked', width: 88},
+		Actions
+	]);
 	
 	
 	 Ext.QuickTips.init();

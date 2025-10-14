@@ -1,5 +1,48 @@
 <?php $webroot = $this->request->getAttribute('webroot');?>
+
+<aside>
+<?php echo $this->Element('left_menu'); ?>
+</aside>
+ <section>
+          <?php   echo $this->Element('hssetab');    ?>
+          
+           <script language="javascript" type="text/javascript">
+              $(document).ready(function() {
+                  $("#main").removeClass("selectedtab");
+                  $("#clientdata").removeClass("selectedtab");
+                  $("#personnel").removeClass("selectedtab");
+                  $("#incident").addClass("selectedtab");
+                  $("#investigation").removeClass("selectedtab");
+                  $("#investigationdata").removeClass("selectedtab");
+                  $("#remidialaction").removeClass("selectedtab");
+                  $("#attachment").removeClass("selectedtab");
+                  $("#clientfeedback").removeClass("selectedtab");
+                  $("#view").removeClass("selectedtab");
+                
+             });
+              function pageRedrection(){
+                
+                 document.location=path+"Reports/add_hsse_incident/<?php echo base64_encode($id); ?>/";  		
+                
+              }
+              
+            </script>
+
+            
+         <div class="topadmin_heading clearfix">
+
+         <h2>HSSE Report (Incident-<?php echo $report_number; ?>) List</h2>
+          <?php if($is_add==1){ ?>
+         <input type="button" name="button" value="<?php echo __("Add New Incident"); ?>" onclick="pageRedrection();" class="buttonadmin fright" />
+         <?php } ?>
+         
+          </div>
+ 
+       <div id="grid-paging" ><?php echo $this->Html->script('hsse_incident_report_grid'); ?></div>
+            
+ </section>
 <script language="JavaScript" type="text/javascript">
+var csrfToken = <?= json_encode($this->request->getParam('_csrfToken')) ?>;
 var action = "<?php echo $action;?>";
 var path = "<?php echo $webroot;?>";
 var AdminListPage = "<?php echo 'http://'.$_SERVER['HTTP_HOST'].$webroot; ?>";
@@ -68,46 +111,3 @@ var act = "<?php echo __('Active');?>";
 var inact = "<?php echo __('Inactive');?>";
 var login_history = "<?php echo __('Login History');?>";
 </script>
-<aside>
-<?php echo $this->Element('left_menu'); ?>
-</aside>
- <section>
-          <?php   echo $this->Element('hssetab');    ?>
-          
-           <script language="javascript" type="text/javascript">
-              $(document).ready(function() {
-                  $("#main").removeClass("selectedtab");
-                  $("#clientdata").removeClass("selectedtab");
-                  $("#personnel").removeClass("selectedtab");
-                  $("#incident").addClass("selectedtab");
-                  $("#investigation").removeClass("selectedtab");
-                  $("#investigationdata").removeClass("selectedtab");
-                  $("#remidialaction").removeClass("selectedtab");
-                  $("#attachment").removeClass("selectedtab");
-                  $("#clientfeedback").removeClass("selectedtab");
-                  $("#view").removeClass("selectedtab");
-                
-             });
-              function pageRedrection(){
-                
-                 document.location=path+"Reports/add_hsse_incident/<?php echo base64_encode($id); ?>/";  		
-                
-              }
-              
-            </script>
-
-            
-         <div class="topadmin_heading clearfix">
-
-         <h2>HSSE Report (Incident-<?php echo $report_number; ?>) List</h2>
-          <?php if($is_add==1){ ?>
-         <input type="button" name="button" value="<?php echo __("Add New Incident"); ?>" onclick="pageRedrection();" class="buttonadmin fright" />
-         <?php } ?>
-         
-          </div>
-         
-          
-          
-       <div id="grid-paging" ><?php echo $this->Html->script('hsse_incident_report_grid'); ?></div>
-    
- </section>
