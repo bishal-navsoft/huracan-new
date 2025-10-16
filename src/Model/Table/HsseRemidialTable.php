@@ -3,7 +3,7 @@ namespace App\Model\Table;
 
 use Cake\ORM\Table;
 
-class HsseRemidialsTable extends Table
+class HsseRemidialTable extends Table
 {
     public function initialize(array $config): void
     {

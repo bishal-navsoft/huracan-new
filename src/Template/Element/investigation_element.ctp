@@ -227,11 +227,12 @@
    
     if(count($investnameHolader)>0){
        for($i=0;$i<count($investnameHolader);$i++){?>
-       
+       <?php //print_r($investnameHolader);?>
         <tr id="<?php echo $investnameHolader[$i]['id']; ?>">
            <td width="30%" align="left" valign="middle"  ><?php echo ucfirst($investnameHolader[$i]['first_name'])." ".$investnameHolader[$i]['last_name']; ?></td>
            <td width="30%" align="left" valign="middle" ><?php echo $investnameHolader[$i]['user_seniority'];?></td>
            <td width="30%" align="left" valign="middle" ><?php echo $investnameHolader[$i]['role_name'];?></td>
+		   <td width="30%" align="left" valign="middle" ><?php echo $investnameHolader[$i]['position'];?></td>
            <td width="10%" align="left" valign="middle" >
 	        <a href="javascript:void(0);" onclick="remove_child(<?php echo $investnameHolader[$i]['id'];?>);">Remove</a>
             </td>

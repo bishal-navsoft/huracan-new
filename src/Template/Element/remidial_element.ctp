@@ -1,8 +1,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
- <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-  <link rel="stylesheet" href="/resources/demos/style.css">
-  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="/resources/demos/style.css">
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <style>
 #priority_specific_date{
 	width: 90px;
@@ -16,9 +16,9 @@
 }
 
 </style>
-
+<?php $webroot = $this->request->getAttribute('webroot');?>
 <script langauge="javascript" type="text/javascript">
-
+	var csrfToken = <?= json_encode($this->request->getParam('_csrfToken')) ?>;
   	$( function() {
     	$( "#priority_specific_date" ).datepicker({
     		dateFormat: 'dd-mm-yy',
@@ -27,7 +27,7 @@
 	        	var remidial_create=date;
 	        	
 	        	
-				var path='<?php echo $this->webroot; ?>'; 
+				var path='<?php echo $webroot; ?>'; 
 				var remidial_priority = 5; //from database value
 				
 	  			var responsibility=$("#responsibility").val();
@@ -36,6 +36,7 @@
 					$.ajax({
 					    type: "POST",
 					    url: path+"Reports/datecalculate/",
+						headers: { 'X-CSRF-Token': csrfToken },
 					    data:"remidial_create="+remidial_create+"&remidial_priority="+remidial_priority+"&responsibility="+responsibility,
 					    success: function(res)
 					    {
@@ -92,11 +93,12 @@ function add_report_remidial(path)
 	    
 	  
 			 var dataStr = $("#add_report_remidial_form").serialize();
-			 var rootpath='<?php echo $this->webroot ?>';
-			 document.getElementById('loader').innerHTML='<img src="<?php echo $this->webroot; ?>img/loader.gif" />';	
+			 var rootpath='<?php echo $webroot ?>';
+			 document.getElementById('loader').innerHTML='<img src="<?php echo $webroot; ?>img/loader.gif" />';	
 			   $.ajax({
 				       type: "POST",
 				       url: path,
+					   headers: { 'X-CSRF-Token': csrfToken },
 				       data:"data="+dataStr+"&report_no="+report_no+"&countRem=<?php echo $countRem; ?>",
 				       success: function(res)
 				       {
@@ -107,15 +109,15 @@ function add_report_remidial(path)
 					  }else if(resval[0]=='add'){
 						document.getElementById('loader').innerHTML='<font color="green">Remidial Action Item Added Successfully</font>';
 						if(resval[1]=='sq'){
-						   document.location='<?php echo $this->webroot; ?>Sqreports/report_sq_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Sqreports/report_sq_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='hsse'){
-						   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Reports/report_hsse_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='audit'){
-						   document.location='<?php echo $this->webroot; ?>Audits/report_audit_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Audits/report_audit_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='job'){
-						   document.location='<?php echo $this->webroot; ?>Jobs/report_job_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Jobs/report_job_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='suggestion'){
-						   document.location='<?php echo $this->webroot; ?>Suggestions/report_suggestion_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Suggestions/report_suggestion_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}
 						
 						
@@ -125,15 +127,15 @@ function add_report_remidial(path)
 						document.getElementById('loader').innerHTML='<font color="green">Remidial Action Item Updated Successfully</font>';
 						
 						if(resval[1]=='sq'){
-						   document.location='<?php echo $this->webroot; ?>Sqreports/report_sq_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Sqreports/report_sq_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='hsse'){
-						   document.location='<?php echo $this->webroot; ?>Reports/report_hsse_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Reports/report_hsse_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='audit'){
-						   document.location='<?php echo $this->webroot; ?>Audits/report_audit_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Audits/report_audit_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='job'){
-						   document.location='<?php echo $this->webroot; ?>Jobs/report_job_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Jobs/report_job_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}else if(resval[1]=='suggestion'){
-						   document.location='<?php echo $this->webroot; ?>Suggestions/report_suggestion_remidial_list/<?php echo base64_encode($reportno) ?>';
+						   document.location='<?php echo $webroot; ?>Suggestions/report_suggestion_remidial_list/<?php echo base64_encode($reportno) ?>';
 						}
 											
 						
@@ -151,7 +153,7 @@ function add_report_remidial(path)
 
 function retrive_value(){
          
-      var path='<?php echo $this->webroot; ?>'; 
+      var path='<?php echo $webroot; ?>'; 
 	  var remidial_create=$("#remidial_create").val();
 	  var responsibility=$("#responsibility").val();
 	  var remidial_priority=document.getElementById('remidial_priority').value;
@@ -192,10 +194,11 @@ function retrive_value(){
 	       document.getElementById("remedial_content").style.display="block";
 
 	  }
-	   document.getElementById('reminder_date_holder').innerHTML='<img src="<?php echo $this->webroot; ?>img/loader.gif" />';	
+	   document.getElementById('reminder_date_holder').innerHTML='<img src="<?php echo $webroot; ?>img/loader.gif" />';	
 	  $.ajax({
 			    type: "POST",
 			    url: path+"Reports/datecalculate/",
+				headers: { 'X-CSRF-Token': csrfToken },
 			    data:"remidial_create="+remidial_create+"&remidial_priority="+remidial_priority+"&responsibility="+responsibility,
 			    success: function(res)
 			    {
@@ -296,12 +299,13 @@ function change_prority(){
 <div class="clearflds"></div>
 <label><?PHP echo __("Responsibility:");?><span>*</span></label>
                          <span id="responsibility_section">
-			    <select id="responsibility" name="responsibility">	
-                             <?php for($i=0;$i<count($responsibility);$i++){?>
-			     <option value="<?php echo $responsibility[$i]['AdminMaster']['id']; ?>" <?php if($remidial_responsibility==$responsibility[$i]['AdminMaster']['id']){echo "selected";}else{} ?>><?php echo $responsibility[$i]['AdminMaster']['first_name']." ".$responsibility[$i]['AdminMaster']['last_name']; ?></option>
-			     <?php } ?>
-			     </select>
-		             
+			    <select id="responsibility" name="responsibility">
+					<?php foreach ($userDetail as $r): ?>
+						<option value="<?= h($r->id) ?>" <?= ($remidial_responsibility == $r->id) ? 'selected' : '' ?>>
+							<?= h($r->first_name . ' ' . $r->last_name) ?>
+						</option>
+					<?php endforeach; ?>
+				</select>	
 		       </span>
 <div class="clearflds"></div>
 <label><?PHP echo __("Summary:");?></label> <?PHP echo $this->Form->input('remidial_summery', array('type'=>'textarea', 'id'=>'remidial_summery','value'=>$remidial_summery, 'label' => false,'div' => false, "onkeyup" =>"check_character();")); ?>
@@ -312,12 +316,15 @@ function change_prority(){
 <div class="clearflds"></div>
 
 <label><?PHP echo __("Priority:");?><span>*</span></label>
-			    <select id="remidial_priority" name="remidial_priority" onchange="retrive_value();">	
-                              <option value="0" selected="selected">Select One</option>
-			     <?php for($i=0;$i<count($priority);$i++){?>
-			      <option value="<?php echo $priority[$i]['Priority']['id'];?>" <?php if($remidial_priority==$priority[$i]['Priority']['id']){echo "selected" ;}else{} ?> ><?php echo $priority[$i]['Priority']['type']; ?></option>
-			     <?php } ?>
-			     </select><span class="textcmpul" id="priority_error" ></span>
+			    <select id="remidial_priority" name="remidial_priority" onchange="retrive_value();">    
+    <option value="0" selected="selected">Select One</option>
+    <?php foreach($priority as $p): ?>
+        <option value="<?= h($p->id) ?>" <?= ($remidial_priority == $p->id) ? 'selected' : '' ?>>
+            <?= h($p->type) ?>
+        </option>
+    <?php endforeach; ?>
+</select>
+<span class="textcmpul" id="priority_error"></span>
 
 <input style="display:none;" type="text"  id="priority_specific_date" readonly="readonly" name="return_depart_date" style="width:90px;"   ><i id="dateicon" style="display:none;" class="fa fa-calendar hasdatepicker"></i>
 
@@ -335,7 +342,7 @@ function change_prority(){
 
 </span>
 <div class="clearflds"></div>
-<?php  if($_SESSION['adminData']['RoleMaster']['id']==1 && $remidial_closure_date==''){ ?>
+<?php  if($_SESSION['adminData']['role_master']['id']==1 && $remidial_closure_date==''){ ?>
 <label><?PHP echo __("Closure Summary:");?></label> <?PHP echo $this->Form->input('remidial_closer_summary', array('type'=>'textarea', 'id'=>'remidial_closer_summary','value'=>$remidial_closer_summary,  'label' => false, "onkeyup" =>"check_close_character();",'div' => false)); ?><span class="textcmpul" id="remidial_closer_summary_error" ></span>
 <div class="clearflds"></div>
 <label>&nbsp;</label><span style="font-size: 11px;">Only 100 characters allow for summary</span>
@@ -346,7 +353,7 @@ function change_prority(){
 <?php } ?>
 
 
-<?php  if($_SESSION['adminData']['RoleMaster']['id']==1 && $remidial_closure_date!=''){ ?>
+<?php if($_SESSION['adminData']['role_master']['id']==1 && $remidial_closure_date!=''){ ?>
 <label><?PHP echo __("Closure Summary:");?></label> <?PHP echo $this->Form->input('remidial_closer_summary', array('type'=>'textarea', 'id'=>'remidial_closer_summary','value'=>$remidial_closer_summary, 'label' => false,"onkeyup" =>"check_close_character();",'div' => false)); ?><span class="textcmpul" id="remidial_closer_summary_error" ></span>
 <div class="clearflds"></div>
 <label>&nbsp;</label><span style="font-size: 11px;">Only 100 characters allow for summary</span>

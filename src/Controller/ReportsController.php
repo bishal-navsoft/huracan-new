@@ -37,10 +37,13 @@ class ReportsController extends AppController
         $this->loadModel("HsseIncident");
         $this->loadModel("ImmediateCauses");
         $this->loadModel("Losses");
-        $this->loadModel("HsseInvestigations");
+        $this->loadModel("HsseInvestigation");
         $this->loadModel("HssePersonnel");
         $this->loadModel("IncidentCategory");
         $this->loadModel("IncidentSubCategory");
+        $this->loadModel("Priority");
+        $this->loadModel('HsseRemidial'); 
+        $this->loadModel('RemidialEmailList');
         $this->viewBuilder()->setLayout("after_adminlogin_template");
     }
 
@@ -2576,58 +2579,86 @@ class ReportsController extends AppController
         return $this->response;
     }
 
-    function incident_block($id = null)
+    public function incidentBlock($id = null)
     {
-        if (!$id) {
-            $this->redirect(["action" => report_hsse_list], null, true);
-        } else {
-            $idArray = explode("^", $id);
-            foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HsseIncident"]["id"] = $id;
-                $this->request->data["HsseIncident"]["isblocked"] = "Y";
-                $this->HsseIncident->save($this->request->data, false);
-            }
-            exit();
+        $this->request->allowMethod(['post', 'get']);
+
+        if (empty($id)) {
+            return $this->redirect(['action' => 'reportHsseList']);
         }
+
+        $ids = explode('^', $id);
+        $hsseIncidentTable = $this->getTableLocator()->get('HsseIncident');
+
+        foreach ($ids as $incidentId) {
+            $incident = $hsseIncidentTable->get($incidentId);
+            $incident->isblocked = 'Y';
+            $hsseIncidentTable->save($incident);
+        }
+
+        // You can choose to redirect or return a response instead of exit()
+        return $this->redirect(['action' => 'reportHsseList']);
     }
 
-    function incident_unblock($id = null)
+    public function incidentUnblock($id = null)
     {
-        if (!$id) {
-            $this->redirect(["action" => report_hsse_list], null, true);
-        } else {
-            $idArray = explode("^", $id);
+        $this->request->allowMethod(['post', 'get']);
 
-            foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HsseIncident"]["id"] = $id;
-                $this->request->data["HsseIncident"]["isblocked"] = "N";
-                $this->HsseIncident->save($this->request->data, false);
-            }
-            exit();
+        if (empty($id)) {
+            return $this->redirect(['action' => 'reportHsseList']);
         }
+
+        $ids = explode('^', $id);
+        $hsseIncidentTable = $this->getTableLocator()->get('HsseIncident');
+
+        foreach ($ids as $incidentId) {
+            try {
+                $incident = $hsseIncidentTable->get($incidentId);
+                $incident->isblocked = 'N';
+                $hsseIncidentTable->save($incident);
+            } catch (\Cake\Datasource\Exception\RecordNotFoundException $e) {
+                // Skip invalid IDs or handle as needed
+                continue;
+            }
+        }
+
+        return $this->redirect(['action' => 'reportHsseList']);
     }
 
-    function incident_delete()
+    public function incidentDelete()
     {
-        $this->layout = "ajax";
+        $this->request->allowMethod(['post', 'ajax']);
+        $this->autoRender = false; // no view
 
-        if ($this->data["id"] != "") {
-            $idArray = explode("^", $this->data["id"]);
-            foreach ($idArray as $id) {
-                $id = $id;
-                $this->request->data["HsseIncident"]["id"] = $id;
-                $this->request->data["HsseIncident"]["isdeleted"] = "Y";
-                $this->HsseIncident->save($this->request->data, false);
+        $idData = $this->request->getData('id');
+
+        $result = ['status' => 'error']; // default
+
+        if (!empty($idData)) {
+            $ids = explode('^', $idData);
+            $hsseIncidentTable = $this->getTableLocator()->get('HsseIncident');
+
+            foreach ($ids as $incidentId) {
+                try {
+                    $incident = $hsseIncidentTable->get($incidentId);
+                    $incident->isdeleted = 'Y';
+                    $hsseIncidentTable->save($incident);
+                } catch (\Cake\Datasource\Exception\RecordNotFoundException $e) {
+                    continue;
+                }
             }
 
-            echo "ok";
-            exit();
-        } else {
-            $this->redirect(["action" => report_hsse_list], null, true);
+            $result['status'] = 'ok';
         }
+
+        // Force JSON output as string
+        $json = json_encode($result);
+        $this->response = $this->response
+                            ->withType('application/json')
+                            ->withStringBody($json);
+        return $this->response;
     }
+
 
     public function addHsseIncident($report_id = null, $incident_id = null)
     {
@@ -3156,7 +3187,7 @@ class ReportsController extends AppController
         exit();
     }
 
-    function add_hsse_remidial($report_id = null, $remidial_id = null)
+    /*function add_hsse_remidial($report_id = null, $remidial_id = null)
     {
         $this->_checkAdminSession();
         $this->_getRoleMenuPermission();
@@ -3297,9 +3328,112 @@ class ReportsController extends AppController
                 $remidialData[0]["HsseRemidial"]["remidial_reminder_data"]
             );
         }
+    }*/
+    public function addHsseRemidial($report_id = null, $remidial_id = null)
+    {
+        $this->_checkAdminSession();
+        $this->_getRoleMenuPermission();
+        $this->grid_access();
+        $this->viewBuilder()->setLayout('after_adminlogin_template');
+
+        // Load Priority and AdminMaster tables
+        $priorityTable = $this->getTableLocator()->get('Priority');
+        $adminTable = $this->getTableLocator()->get('AdminMasters');
+        $hsseRemidialTable = $this->getTableLocator()->get('HsseRemidial');
+        $reportTable = $this->getTableLocator()->get('Reports');
+        $clientTable = $this->getTableLocator()->get('HsseClient');
+
+        $priority = $priorityTable->find()->all();
+        $userDetail = $adminTable->find()->all();
+        $this->set(compact('priority', 'userDetail'));
+        $this->set('created_by',$_SESSION['adminData']['first_name'] . ' ' . $_SESSION['adminData']['last_name']);
+
+        // Fetch report details
+        $reportDetail = $reportTable->find()
+            ->where(['Reports.id' => base64_decode($report_id)])
+            ->first();
+
+        $clientDetail = $clientTable->find()
+            ->where(['HsseClient.report_id' => base64_decode($report_id)])
+            ->first();
+
+        // Client feedback logic
+        if ($clientDetail) {
+            $this->set('client_feedback', $clientDetail->clientreviewed == 3 ? 1 : 0);
+        } else {
+            $this->set('client_feedback', 0);
+        }
+
+        $this->set('report_number', $reportDetail->report_no);
+        $this->set('reportno', base64_decode($report_id));
+
+        // Count existing remedial actions
+        $countRem = $hsseRemidialTable->find()
+            ->where(['HsseRemidial.report_no' => base64_decode($report_id)])
+            ->count();
+
+        if (empty($remidial_id)) {
+            $this->set('id', 0);
+            $countRem = $countRem ? $countRem + 1 : 1;
+            $this->set(compact('countRem'));
+
+            $this->set([
+                'heading' => 'Add Remedial Action Item',
+                'button' => 'Submit',
+                'remidial_create' => '',
+                'remidial_summery' => '',
+                'remidial_closer_summary' => '',
+                'remidial_action' => '',
+                'remidial_priority' => '',
+                'remidial_closure_target' => '',
+                'remidial_responsibility' => '',
+                'remidial_reminder_data' => '',
+                'remidial_closure_date' => '',
+                'remidial_style' => 'style="display:none"',
+                'remidial_button_style' => 'style="display:block"',
+            ]);
+        } else {
+            // Fetch existing remedial data
+            $remidialData = $hsseRemidialTable->find()
+                ->where(['HsseRemidial.id' => base64_decode($remidial_id)])
+                ->first();
+
+            $this->set('countRem', $remidialData->remedial_no);
+            $this->set('id', base64_decode($remidial_id));
+
+            $this->set([
+                'heading' => 'Edit Remedial Action Item',
+                'button' => 'Update',
+                'remidial_create' => implode('-', [
+                    explode('-', $remidialData->remidial_create)[1],
+                    explode('-', $remidialData->remidial_create)[2],
+                    explode('-', $remidialData->remidial_create)[0]
+                ]),
+                'remidial_summery' => $remidialData->remidial_summery,
+                'remidial_action' => $remidialData->remidial_action,
+                'remidial_priority' => $remidialData->remidial_priority,
+                'remidial_closure_target' => $remidialData->remidial_closure_target,
+                'remidial_responsibility' => $remidialData->remidial_responsibility,
+                'remidial_reminder_data' => $remidialData->remidial_reminder_data,
+            ]);
+
+            if ($remidialData->remidial_closure_date && $remidialData->remidial_closure_date != '0000-00-00') {
+                $dateParts = explode('-', $remidialData->remidial_closure_date);
+                $this->set('remidial_closure_date', $dateParts[1] . '/' . $dateParts[2] . '/' . $dateParts[0]);
+                $this->set('remidial_closer_summary', $remidialData->remidial_closer_summary);
+                $this->set('remidial_style', 'style="display:block"');
+                $this->set('remidial_button_style', 'style="display:none"');
+            } else {
+                $this->set('remidial_closure_date', '');
+                $this->set('remidial_closer_summary', '');
+                $this->set('remidial_style', 'style="display:block"');
+                $this->set('remidial_button_style', 'style="display:block"');
+            }
+        }
     }
 
-    function datecalculate()
+
+    /*function datecalculate()
     {
         $this->layout = "ajax";
         $rempriority = $this->Priority->find("all", [
@@ -3345,9 +3479,51 @@ class ReportsController extends AppController
             }
         }
         exit();
+    }*/
+    public function datecalculate()
+    {
+        $this->viewBuilder()->setLayout('ajax');
+
+        $remidial_priority = $this->request->getData('remidial_priority');
+        $remidial_create   = $this->request->getData('remidial_create');
+
+        $rempriority = $this->Priority
+            ->find()
+            ->where(['id' => $remidial_priority])
+            ->first();
+
+        if (!$rempriority) {
+            echo 'Invalid priority';
+            exit();
+        }
+
+        // Parse date from dd-mm-yyyy
+        $date = \DateTime::createFromFormat('d-m-Y', $remidial_create);
+        if ($rempriority->id == 5) {
+            echo $date->format('d/m/Y H:i:s');
+            exit();
+        }
+
+        switch ($rempriority->time_type) {
+            case 'days':
+                $date->modify('+' . $rempriority->time . ' days');
+                echo $date->format('d/m/Y H:i:s');
+                break;
+
+            case 'hrs':
+                $date->modify('+' . $rempriority->time . ' hours');
+                echo $date->format('d/m/Y H:i:s');
+                break;
+
+            default:
+                echo $date->format('d/m/Y H:i:s');
+                break;
+        }
+
+        exit();
     }
 
-    function remidialprocess()
+    /*function remidialprocess()
     {
         $this->layout = "ajax";
         $this->_checkAdminSession();
@@ -3487,6 +3663,110 @@ class ReportsController extends AppController
             echo $res . "~hsse";
         } else {
             echo "fail";
+        }
+
+        exit();
+    }*/
+    public function remidialprocess()
+    {
+        $this->request->allowMethod(['post']);
+        $this->viewBuilder()->setLayout('ajax');
+        $this->_checkAdminSession();
+
+        $data = $this->request->getData(); // CakePHP 3.8 way
+        $remidialArray = [];
+
+        // Check if updating or adding
+        if (!empty($data['add_report_remidial_form']['id'])) {
+            $res = 'update';
+            $remidialEntity = $this->HsseRemidial->get($data['add_report_remidial_form']['id']);
+        } else {
+            $res = 'add';
+            $remidialEntity = $this->HsseRemidial->newEntity();
+        }
+
+        // Prepare dates
+        $remidialCreateParts = explode('-', $data['remidial_create']);
+        $remidialCreateFormatted = $remidialCreateParts[2] . '-' . $remidialCreateParts[0] . '-' . $remidialCreateParts[1];
+
+        $remidialEntity = $this->HsseRemidial->patchEntity($remidialEntity, [
+            'remidial_create' => $remidialCreateFormatted,
+            'remidial_createby' => $_SESSION['adminData']['AdminMaster']['id'],
+            'report_no' => $data['report_no'],
+            'remedial_no' => $data['countRem'],
+            'remidial_priority' => explode('~', $data['remidial_priority'])[0],
+            'remidial_responsibility' => $data['responsibility'],
+            'remidial_summery' => $data['add_report_remidial_form']['remidial_summery'] ?? '',
+            'remidial_closer_summary' => $data['add_report_remidial_form']['remidial_closer_summary'] ?? '',
+            'remidial_action' => $data['add_report_remidial_form']['remidial_action'] ?? '',
+            'remidial_reminder_data' => $data['add_report_remidial_form']['remidial_reminder_data'] ?? '',
+            'remidial_closure_target' => $data['add_report_remidial_form']['remidial_closure_target'] ?? '',
+            'remidial_closure_date' => !empty($data['remidial_closure_date'])
+                ? $data['remidial_closure_date']
+                : null
+        ]);
+
+        // Calculate reminder & email dates
+        $createON = $remidialEntity->remidial_create . ' 00:00:00';
+        $explodeCTR = explode(' ', $remidialEntity->remidial_closure_target);
+        $explodeCTD = explode('/', $explodeCTR[0]);
+        $reminderON = $explodeCTD[1] . '-' . $explodeCTD[0] . '-' . $explodeCTD[2] . ' ' . $explodeCTR[1];
+
+        $strCreateOn = strtotime($createON);
+        $strReminderOn = strtotime($reminderON);
+
+        $remdate = $explodeCTD[2] . '-' . $explodeCTD[1] . '-' . $explodeCTD[0];
+        $dateHolder = [$remdate];
+        $dateIndex = [3, 7, 30];
+
+        foreach ($dateIndex as $idx) {
+            $emaildateBefore = date('Y-m-d', mktime(0, 0, 0, $explodeCTD[1], $explodeCTD[0] - $idx, $explodeCTD[2]));
+            if ($strCreateOn < strtotime($emaildateBefore)) {
+                $dateHolder[] = $emaildateBefore;
+            }
+
+            $emaildateAfter = date('Y-m-d', mktime(0, 0, 0, $explodeCTD[1], $explodeCTD[0] + $idx, $explodeCTD[2]));
+            if ($strCreateOn < strtotime($emaildateAfter)) {
+                $dateHolder[] = $emaildateAfter;
+            }
+        }
+
+        // Delete existing email reminders
+        $connection = $this->RemidialEmailList->getConnection();
+        $connection->execute(
+            'DELETE FROM remidial_email_lists WHERE remedial_no = :remedial_no AND report_id = :report_id AND report_type = :report_type',
+            [
+                'remedial_no' => $remidialEntity->remedial_no,
+                'report_id' => $remidialEntity->report_no,
+                'report_type' => 'hsse'
+            ]
+        );
+
+        // Insert new email reminders
+        if (empty($data['remidial_closure_date'])) {
+            foreach ($dateHolder as $d) {
+                $userDetail = $this->AdminMaster->find()->where(['id' => $data['responsibility']])->first();
+                if ($userDetail) {
+                    $remidialEmailEntity = $this->RemidialEmailList->newEntity();
+                    $remidialEmailEntity = $this->RemidialEmailList->patchEntity($remidialEmailEntity, [
+                        'report_id' => $remidialEntity->report_no,
+                        'remedial_no' => $remidialEntity->remedial_no,
+                        'report_type' => 'hsse',
+                        'email' => $userDetail->admin_email,
+                        'status' => 'N',
+                        'email_date' => $d,
+                        'send_to' => $userDetail->id
+                    ]);
+                    $this->RemidialEmailList->save($remidialEmailEntity);
+                }
+            }
+        }
+
+        // Save remedial entity
+        if ($this->HsseRemidial->save($remidialEntity)) {
+            echo $res . "~hsse";
+        } else {
+            echo 'fail';
         }
 
         exit();
@@ -4092,7 +4372,6 @@ class ReportsController extends AppController
 
             $userData[] = $u;
         }
-        // dd($userData);
         $this->set('userDetail', $userData);
 
         /** -----------------------------
@@ -4125,7 +4404,7 @@ class ReportsController extends AppController
          *  Investigation Details
          *  ----------------------------- */
 
-        $investigationdetail = $this->HsseInvestigations->find()
+        $investigationdetail = $this->HsseInvestigation->find()
             ->where(['report_id' => $decodedReportId])
             ->first();
 
@@ -4136,9 +4415,9 @@ class ReportsController extends AppController
             // Fetch each team member’s info
             $investnameHolader = [];
             foreach ($teamIds as $i => $memberId) {
-                $teamMember = $this->AdminMaster->find()
-                    ->contain(['RoleMaster'])
-                    ->where(['AdminMaster.id' => $memberId])
+                $teamMember = $this->AdminMasters->find()
+                    ->contain(['RoleMasters'])
+                    ->where(['AdminMasters.id' => $memberId])
                     ->first();
 
                 if ($teamMember) {
@@ -4154,6 +4433,7 @@ class ReportsController extends AppController
                         'first_name' => $teamMember->first_name,
                         'last_name' => $teamMember->last_name,
                         'user_seniority' => $userSeniority,
+                        'position' => $teamMember->position,
                         'role_name' => $teamMember->role_master->role_name ?? '',
                         'position_seniorty' => implode('~', [
                             trim($teamMember->first_name . ' ' . $teamMember->last_name),
@@ -4213,7 +4493,7 @@ class ReportsController extends AppController
         $this->set("couseList", $couseList);
     }
 
-    function save_hsse_investigation()
+    /*function save_hsse_investigation()
     {
         $this->layout = "ajax";
         $investigation = [];
@@ -4299,6 +4579,48 @@ class ReportsController extends AppController
         }
 
         exit();
+    }*/
+    public function saveHsseInvestigation()
+    {
+        $this->request->allowMethod(['post', 'ajax']);
+        $this->viewBuilder()->setLayout('ajax');
+        $this->autoRender = false;
+
+        $data = $this->request->getData();
+        $hsseInvestigationTable = $this->getTableLocator()->get('HsseInvestigation');
+
+        // Check if an investigation already exists for this report
+        $investigationEntity = $hsseInvestigationTable->find()
+            ->where(['report_id' => $data['report_id']])
+            ->first();
+
+        $res = $investigationEntity ? 'Update' : 'add';
+
+        if (!$investigationEntity) {
+            $investigationEntity = $hsseInvestigationTable->newEntity();
+        }
+
+        // Set fields
+        $investigationEntity->report_id = $data['report_id'] ?? null;
+        $investigationEntity->team_user_id = $data['id_holder'] ?? null;
+
+        $investigationEntity->people_title = ($data['people_title'] ?? '') === 'Enter People Title' ? '' : $data['people_title'];
+        $investigationEntity->people_description = ($data['people_descrption'] ?? '') === 'Enter People Description' ? '' : $data['people_descrption'];
+
+        $investigationEntity->position_title = ($data['position_title'] ?? '') === 'Enter Position Title' ? '' : $data['position_title'];
+        $investigationEntity->position_description = ($data['position_descrption'] ?? '') === 'Enter Position Description' ? '' : $data['position_descrption'];
+
+        $investigationEntity->parts_title = ($data['part_title'] ?? '') === 'Enter Parts Title' ? '' : $data['part_title'];
+        $investigationEntity->parts_description = ($data['part_descrption'] ?? '') === 'Enter Parts Description' ? '' : $data['part_descrption'];
+
+        $investigationEntity->paper_title = ($data['paper_title'] ?? '') === 'Enter Paper Title' ? '' : $data['paper_title'];
+        $investigationEntity->paper_descrption = ($data['paper_descrption'] ?? '') === 'Enter Paper Description' ? '' : $data['paper_descrption'];
+
+        if ($hsseInvestigationTable->save($investigationEntity)) {
+            echo $res;
+        } else {
+            echo 'fail';
+        }
     }
 
     function date_calculate()

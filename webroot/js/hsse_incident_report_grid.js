@@ -7,27 +7,38 @@ Ext.onReady(function(){
     }
 	//Function for unblock selected records
 	function delete_incident(id) {
-        Ext.Msg.confirm('Confirm', 'Are you sure you want to delete this record?', function (btn) {
-            if (btn === 'yes') {
-                $.ajax({
-                    type: "POST",
-                    url: path + "Reports/incident_delete/",
-                    headers: { 'X-CSRF-Token': csrfToken },
-                    data: { id: id },
-                    success: function (res) {
-                        if (res === 'ok') {
-                            document.location = path + 'Reports/report_hsse_incident_list/' + report_val;
-                        } else {
-                            Ext.Msg.alert('Error', 'Failed to delete record.');
-                        }
-                    },
-                    error: function () {
-                        Ext.Msg.alert('Error', 'Server error while deleting record.');
-                    }
-                });
-            }
-        });
-    }
+		Ext.Msg.confirm('Confirm', 'Are you sure you want to delete this record?', function (btn) {
+			if (btn === 'yes') {
+				$.ajax({
+					type: "POST",
+					url: path + "Reports/incident_delete/",
+					headers: { 'X-CSRF-Token': csrfToken },
+					data: { id: id },
+					success: function (res) {
+						// Parse JSON manually if it's still a string
+						if (typeof res === 'string') {
+							try {
+								res = JSON.parse(res);
+							} catch (e) {
+								Ext.Msg.alert('Error', 'Invalid server response.');
+								return;
+							}
+						}
+
+						if (res.status === 'ok') {
+							document.location = path + 'Reports/report_hsse_incident_list/' + report_val;
+						} else {
+							Ext.Msg.alert('Error', 'Failed to delete record.');
+						}
+					},
+					error: function () {
+						Ext.Msg.alert('Error', 'Server error while deleting record.');
+					}
+				});
+			}
+		});
+	}
+
 
 	function unblockSelected() {
         var selectedArray = checkBox.getSelections();

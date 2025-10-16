@@ -2,7 +2,7 @@
 <aside>
 <?php echo $this->Element('left_menu'); ?>
 </aside>
- 
+<?php $webroot = $this->request->getAttribute('webroot');?>
  <section>
  <?php
 
@@ -39,7 +39,7 @@
 <div class="buttonpanel">
 <span id="loader" style="float:left;font-size: 13px;"></span>
 <span id="remidial_button_area" <?php echo $remidial_button_style; ?>>
-<input type="button" name="save" id="save" class="buttonsave" onclick="add_report_remidial('<?php echo $this->webroot; ?>Reports/remidialprocess/');" value="<?php echo $button; ?>" />
+<input type="button" name="save" id="save" class="buttonsave" onclick="add_report_remidial('<?php echo $webroot; ?>Reports/remidialprocess/');" value="<?php echo $button; ?>" />
 </span>
 </div>
 <?php echo $this->Form->end(); ?>

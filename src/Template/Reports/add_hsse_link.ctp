@@ -56,7 +56,7 @@
 		var idString=tr_id.toString();
 	
 		document.getElementById('id_holder').value=idString;
-		$('#report_holder').append('<tr id='+report_detail_info[0]+'><td width="20%" align="left" valign="middle">'+report_detail_info[2]+'</td><td width="20%" align="left" valign="middle">'+report_detail_info[1]+'</td><td width="50%" align="left" valign="middle">'+report_detail_info[3]+'</td><td width="10%" align="left" valign="middle" ><a href="javascript:void(0);" onclick="remove_child(\''+report_detail_info[0]+'\');">Remove</a></td></tr>');
+		$('#report_holder').append('<tr id='+report_detail_info[0]+'><td width="20%" align="left" valign="middle">'+report_detail_info[2]+'</td><td width="20%" align="left" valign="middle">'+report_detail_info[1]+'</td><td width="50%" align="left" valign="middle">'+report_detail_info[3]+'</td><td width="10%" align="left" valign="middle" ><a href="javascript:void(0);" onclick="(\''+report_detail_info[0]+'\');">Remove</a></td></tr>');
 	     
 	  }
    }
